@@ -1,0 +1,23 @@
+{
+  "name": "@courtplus/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "generate:data": "node scripts/generate-data.mjs",
+    "build": "node scripts/generate-data.mjs --check && tsc -p tsconfig.json",
+    "test": "node scripts/generate-data.mjs --check && vitest run"
+  },
+  "dependencies": {
+    "@courtplus/contracts": "0.0.0"
+  }
+}

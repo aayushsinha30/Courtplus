@@ -1,0 +1,13 @@
+orders/
+*.order.pdf
+node_modules/
+dist/
+out/
+release/
+ml/**/data/
+ml/**/runs/
+ml/**/artifacts/
+*.onnx
+*.safetensors
+*.bin
+.venv/
