@@ -42,6 +42,8 @@ const access: Record<ApiMethod, { roles: readonly Role[]; write?: boolean; bodyL
   verify: { roles: all, bodyLimit: maxVerifyBase64 + 16 * 1024, rate: 6 },
   stats: { roles: all },
   role: { roles: all },
+  analyzeAdjournments: { roles: all },
+  judgeDashboard: { roles: all },
 };
 
 export interface Options {
@@ -143,6 +145,17 @@ export async function buildApp(options: Options) {
     stats: () => ({ peopleCount: cases.listPersons().length, caseCount: cases.listCases().length, figures }),
     role: ({ role }) => ['utrc_member', 'admin', 'judge'].includes(role) ? 'utrc'
       : role as Awaited<ReturnType<CourtPlusApi['role']>>,
+    analyzeAdjournments: async (_, caseId, asOf) => {
+      const { analyzeAdjournments: analyze } = await import('@courtplus/engine');
+      const allCases = cases.listCases();
+      const c = allCases.find(item => item.id === caseId);
+      if (!c) throw new HttpError(404, 'CASE_NOT_FOUND');
+      return analyze(c, asOf ?? indiaDate());
+    },
+    judgeDashboard: async (_, asOf, judgeName) => {
+      const { computeJudgePerformance } = await import('@courtplus/engine');
+      return computeJudgePerformance(cases.listCases(), asOf ?? indiaDate(), judgeName);
+    },
   };
 
   const schemas: { [K in ApiMethod]: z.ZodType<Parameters<CourtPlusApi[K]>> } = apiInputs;

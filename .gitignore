@@ -17,4 +17,4 @@ video/node_modules/
 video/out/
 video/public/clips/
 deploy/secrets/
-
+*.tsbuildinfo
