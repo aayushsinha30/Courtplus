@@ -27,6 +27,16 @@ For the fictional fixture, use the test DLSA account to send the contents of **t
 ./deploy/smoke.ps1 -CaFile deploy/localhost.crt -CaseId YOUR_CASE_ID -DlsaUser YOUR_DLSA_USER -JailUser YOUR_JAIL_USER
 ```
 
+## Citizen evidence uploads
+
+Set **COURTPLUS_EVIDENCE_ENABLED=1** in the appliance environment (or the Compose environment before recreating the service). Provision an account with the **judge** role using the existing account creation command. Each appliance has one shared evidence inbox for its judge accounts.
+
+Citizens visit **/submit-evidence** and enter their name, an optional case reference and note, and up to five original files. The form accepts common photo, video, audio and document extensions, with limits of 25 MiB per file and 40 MiB per submission. It returns a reference after the database commits the submission. A reference identifies the submission and grants no access to its contents.
+
+Judges sign in at **/login** and land at **/judge/evidence**. They can open the submission and download the original bytes. The appliance keeps attachments in its encrypted SQLite database and records receipt, opening and downloading in the existing audit log. The inbox accepts up to 1 GiB of attachment data per appliance. The submitter's name, case reference and note are self-reported, and attachments may contain executable or identifying content. Receipt in the inbox records delivery to this appliance.
+
+The evidence upload API accepts **POST /api/evidence/submissions** with multipart fields **submittedBy**, optional **caseReference** and **statement**, and one or more **evidence** files. It returns HTTP 201 and the **reference**, **receivedAt** and **fileCount**.
+
 ## HTTP and client integration
 
 | Route | Behavior |

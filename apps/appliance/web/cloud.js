@@ -23,8 +23,14 @@
         DRAFT_SIGNER_UNCONFIGURED: 'The server has no draft signing key configured.',
         DRAFT_OFFICE_UNCONFIGURED: 'The prison or district for this draft has not been configured.',
         FORBIDDEN: 'Your account cannot perform this action.',
+        EVIDENCE_FILE_TYPE: 'Choose a supported photo, video, audio or document file.',
+        EVIDENCE_EMPTY: 'Choose at least one non-empty file.',
+        EVIDENCE_BUSY: 'The court is receiving other uploads. Try again shortly.',
+        EVIDENCE_STORAGE_FULL: 'The court inbox cannot accept more files right now.',
       }[payload.error];
-      throw new Error(message || (response.status === 429 ? 'Try again in a minute.' : 'Request failed (' + response.status + ').'));
+      const fallback = response.status === 413 ? 'The upload exceeds the file or submission limits.'
+        : response.status === 429 ? 'Try again in a minute.' : 'Request failed (' + response.status + ').';
+      throw new Error(message || fallback);
     }
     if (response.status !== 204) return response.json();
   }
@@ -117,7 +123,37 @@
     });
   }
 
-  if (mode === 'home' || mode === 'handoffs') signOut();
+  if (mode === 'evidence-upload') {
+    const form = document.querySelector('#evidence-upload');
+    const status = form.querySelector('[role=status]');
+    const button = form.querySelector('button[type=submit]');
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const files = Array.from(form.elements.evidence.files);
+      const mib = 1024 * 1024;
+      if (files.length > 5 || files.some(file => file.size > 25 * mib)
+        || files.reduce((total, file) => total + file.size, 0) > 40 * mib) {
+        status.textContent = 'Choose up to 5 files, 25 MiB per file and 40 MiB in total.';
+        return;
+      }
+      button.disabled = true;
+      status.textContent = 'Uploading…';
+      try {
+        const { reference, fileCount } = await request(form.action, {
+          method: 'POST', credentials: 'omit', body: new FormData(form),
+        });
+        form.reset();
+        status.textContent = 'Received ' + fileCount + (fileCount === 1 ? ' file. ' : ' files. ')
+          + 'Save your submission reference ' + reference + '.';
+      } catch (error) {
+        status.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
+  if (mode === 'home' || mode === 'handoffs' || mode === 'judge-evidence') signOut();
   if (mode === 'handoffs') {
     const form = document.querySelector('#new-handoff');
     const status = document.querySelector('#handoff-status');

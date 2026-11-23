@@ -36,6 +36,7 @@ try {
       office: process.env.COURTPLUS_ISSUING_OFFICE,
       prison: process.env.COURTPLUS_PRISON,
       district: process.env.COURTPLUS_DISTRICT,
+      evidenceEnabled: process.env.COURTPLUS_EVIDENCE_ENABLED === '1',
     });
     app.addHook('onClose', async () => { db.close(); });
     for (const signal of ['SIGINT', 'SIGTERM'] as const) {

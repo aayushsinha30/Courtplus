@@ -9,7 +9,7 @@ import { buildApp } from '../src/app.js';
 import { addAccount } from '../src/auth.js';
 import { canonical, openDb, verifyAudit, type Db } from '../src/db.js';
 import { createExportCache } from '../src/exports.js';
-import { roles, type Role } from '../src/inputs.js';
+import { caseRoles, roles, type Role } from '../src/inputs.js';
 import { addIssuer } from '../src/receipts.js';
 
 const origin = 'https://courtplus.example.test';
@@ -105,10 +105,10 @@ describe.sequential('CourtPlus Cloud', () => {
 
   test('role matrix gates case writes, filing, release, acknowledgement, and publication', async () => {
     for (const role of roles.options) {
-      expect((await api(role, 'POST', '/api/listPersons', [])).statusCode).toBe(200);
-      expect((await api(role, 'POST', '/api/role', [])).json()).toBe(
-        role === 'utrc_member' || role === 'admin' ? 'utrc' : role,
-      );
+      expect((await api(role, 'POST', '/api/listPersons', [])).statusCode).toBe(role === 'judge' ? 403 : 200);
+      const roleResponse = await api(role, 'POST', '/api/role', []);
+      if (role === 'judge') expect(roleResponse.statusCode).toBe(403);
+      else expect(roleResponse.json()).toBe(role === 'utrc_member' || role === 'admin' ? 'utrc' : role);
       const canEdit = ['dlsa', 'legal_aid', 'superintendent'].includes(role);
       expect((await api(role, 'POST', '/api/saveCase', [person, record])).statusCode).toBe(canEdit ? 204 : 403);
       expect((await api(role, 'POST', '/api/cases/' + record.id + '/application-filed', { filedOn: '2026-11-22' })).statusCode)
@@ -315,10 +315,10 @@ describe.sequential('CourtPlus Cloud', () => {
     const login = (username: string, remoteAddress: string) => app.inject({
       method: 'POST', url: '/api/auth/login', remoteAddress, payload: { username, password, client: 'desktop' },
     });
-    const sameIp = await Promise.all(roles.options.map(role => login(role, '192.0.2.44')));
+    const sameIp = await Promise.all(caseRoles.map(role => login(role, '192.0.2.44')));
     expect(sameIp.map(result => result.statusCode).sort()).toEqual([200, 200, 429, 429, 429]);
     const separate = await Promise.all(roles.options.map((role, index) => login(role, '192.0.2.' + (51 + index))));
-    expect(separate.map(result => result.statusCode)).toEqual([200, 200, 200, 200, 200]);
+    expect(separate.every(result => result.statusCode === 200)).toBe(true);
     const sameAccount = await Promise.all([login('dlsa', '192.0.2.58'), login('dlsa', '192.0.2.59')]);
     expect(sameAccount.map(result => result.statusCode).sort()).toEqual([200, 429]);
   });

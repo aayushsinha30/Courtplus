@@ -19,3 +19,7 @@ li + li { margin-top: .5rem; }
 li p { margin-top: 0; }
 dt { font-weight: 650; }
 dd { margin: .25rem 0 1rem; overflow-wrap: anywhere; }
+#evidence-upload input, #evidence-upload textarea { box-sizing: border-box; max-width: 100%; }
+#evidence-upload textarea { display: block; width: 100%; padding: .5rem .65rem; border: 1px solid #556b80; border-radius: .25rem; font: inherit; color: inherit; }
+#evidence-upload [role="status"] { overflow-wrap: anywhere; }
+.evidence-note { white-space: pre-wrap; }

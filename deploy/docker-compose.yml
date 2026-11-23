@@ -17,6 +17,7 @@ services:
       APP_ORIGIN: "https://${COURTPLUS_SITE:-localhost}"
       COURTPLUS_DB_PATH: /var/lib/courtplus/courtplus.sqlite3
       COURTPLUS_HANDOFF_MINUTES: "${COURTPLUS_HANDOFF_MINUTES:-60}"
+      COURTPLUS_EVIDENCE_ENABLED: "${COURTPLUS_EVIDENCE_ENABLED:-0}"
     secrets:
       - db_key
     volumes:

@@ -36,6 +36,12 @@ const schema = [
 
 export type Db = Database.Database;
 
+const evidenceSchema = [
+  'CREATE TABLE evidence_submissions (seq INTEGER PRIMARY KEY, id TEXT NOT NULL UNIQUE, received_at TEXT NOT NULL, submitted_by TEXT NOT NULL, case_reference TEXT NOT NULL, statement TEXT NOT NULL) STRICT',
+  'CREATE TABLE evidence_files (id TEXT PRIMARY KEY, submission_id TEXT NOT NULL REFERENCES evidence_submissions(id), name TEXT NOT NULL, byte_length INTEGER NOT NULL CHECK (byte_length > 0 AND byte_length = length(content)), content BLOB NOT NULL) STRICT',
+  'CREATE INDEX evidence_files_submission ON evidence_files(submission_id)',
+];
+
 export function openDb(path: string, secretPath: string): Db {
   const key = readFileSync(secretPath, 'utf8').trim();
   if (!/^[0-9a-f]{64}$/i.test(key)) throw new Error('SQLCipher secret must contain 32 hex-encoded bytes');
@@ -48,10 +54,11 @@ export function openDb(path: string, secretPath: string): Db {
     db.pragma('recursive_triggers=ON');
     db.transaction(() => {
       const version = db.pragma('user_version', { simple: true });
-      if (version === 1) return;
-      if (version !== 0) throw new Error('Unsupported CourtPlus Cloud database version');
-      for (const sql of schema) db.exec(sql);
-      db.pragma('user_version=1');
+      if (version === 2) return;
+      if (version !== 0 && version !== 1) throw new Error('Unsupported CourtPlus Cloud database version');
+      if (version === 0) for (const sql of schema) db.exec(sql);
+      for (const sql of evidenceSchema) db.exec(sql);
+      db.pragma('user_version=2');
     }).immediate();
     return db;
   } catch (error) {

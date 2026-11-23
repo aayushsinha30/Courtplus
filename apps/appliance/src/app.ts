@@ -14,11 +14,12 @@ import { createCases, indiaDate } from './cases.js';
 import type { Db } from './db.js';
 import { createHandoffs, handoffRoutes } from './handoff.js';
 import { HttpError, missingFeature, page, parse } from './http.js';
-import { apiInputs, date, digest, envelopes, id, maxVerifyBase64, roles, type Role } from './inputs.js';
+import { apiInputs, caseRoles, date, digest, envelopes, id, maxVerifyBase64, type Role } from './inputs.js';
 import { createReceipts, receiptRoutes } from './receipts.js';
 import { exportRoutes } from './exports.js';
+import { evidenceRoutes } from './evidence.js';
 
-const all = roles.options;
+const all = caseRoles;
 const editors = ['superintendent', 'dlsa', 'legal_aid'] as const;
 const reporters = [...editors, 'utrc_member'] as const;
 const handoffReaders = all;
@@ -55,6 +56,7 @@ export interface Options {
   office?: string;
   prison?: string;
   district?: string;
+  evidenceEnabled?: boolean;
   logger?: FastifyServerOptions['logger'];
 }
 
@@ -88,6 +90,7 @@ export async function buildApp(options: Options) {
   });
 
   const { authenticate, authorize } = await authRoutes(app, db, origin);
+  if (options.evidenceEnabled) await evidenceRoutes(app, db, origin, now, authorize);
   const handoffs = createHandoffs(db, options.handoffDueMs ?? 60 * 60_000, now);
   const { notify } = handoffRoutes(app, handoffs, (request, write, role) =>
     authorize(request, role ? [role] : handoffReaders, write), options.tickMs ?? 1000);
@@ -179,6 +182,7 @@ export async function buildApp(options: Options) {
     '<label>Account<input name="username" autocomplete="username" required></label>',
     '<label>Password<input name="password" type="password" autocomplete="current-password" required></label>',
     '<button type="submit">Sign in</button><p role="status"></p></form>',
+    options.evidenceEnabled ? '<p><a href="/submit-evidence">Send evidence to the court</a></p>' : '',
   ].join(''), 'login'));
 
   app.get('/handoffs', async (request, reply) => {
@@ -216,7 +220,10 @@ export async function buildApp(options: Options) {
       return reply.code(404).send({ error: 'NOT_FOUND' });
     }
     try {
-      authenticate(request);
+      const session = authenticate(request);
+      if (session.role === 'judge') return options.evidenceEnabled
+        ? reply.redirect('/judge/evidence')
+        : reply.code(404).send({ error: 'NOT_FOUND' });
     } catch (error) {
       if (error instanceof HttpError && error.statusCode === 401) return reply.redirect('/login');
       throw error;
