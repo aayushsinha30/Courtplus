@@ -27,6 +27,8 @@ const courtplus: DesktopWorkspaceApi = {
   verify: bundle => invoke('verify', bundle),
   stats: () => invoke('stats'),
   role: () => invoke('role'),
+  analyzeAdjournments: (caseId, asOf) => invoke('analyzeAdjournments', caseId, asOf),
+  judgeDashboard: (asOf, judgeName) => invoke('judgeDashboard', asOf, judgeName),
 };
 
 contextBridge.exposeInMainWorld('courtplus', courtplus);

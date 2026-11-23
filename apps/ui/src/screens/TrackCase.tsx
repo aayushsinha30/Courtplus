@@ -28,6 +28,7 @@ export const EVENT_WORDS: Record<CourtEvent['kind'], string> = {
   convicted: 'Convicted: found guilty',
   released: 'Released from custody',
   hearing: 'Hearing',
+  adjournment: 'Adjournment: hearing postponed to another date',
   other: 'Other court event',
 };
 

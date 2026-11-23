@@ -25,7 +25,7 @@ function api(cases: CaseRecord[] = [record], cards: Card[] = []): WorkspaceApi {
     listCases: vi.fn(async () => cases), listPersons: vi.fn(async () => []), board: vi.fn(async () => cards),
     screen: vi.fn(async () => result), stats: vi.fn(async () => null),
     importOrder: vi.fn(), saveCase: vi.fn(), updateCard: vi.fn(), exportDraft: vi.fn(), exportScReturn: vi.fn(), verify: vi.fn(), role: vi.fn(),
-  } as CourtPlusApi;
+  } as unknown as CourtPlusApi;
 }
 function show(ui: JSX.Element, mock = api()) {
   return render(<AppProvider api={mock}><MemoryRouter>{ui}</MemoryRouter></AppProvider>);

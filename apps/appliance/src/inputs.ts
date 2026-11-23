@@ -90,6 +90,8 @@ export const apiInputs = {
   verify: z.tuple([envelopes.extend({ pdf: encodedBytes })]),
   stats: z.tuple([]),
   role: z.tuple([]),
+  analyzeAdjournments: z.tuple([id, date.optional()]),
+  judgeDashboard: z.tuple([date.optional(), z.string().optional()]),
 } satisfies ApiSchemas;
 
 export function forbidden(): never {
