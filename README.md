@@ -40,6 +40,8 @@ One platform with three doors. Judges get hints, triage and a tamper-proof recor
 - Direct-to-judge proof upload (with identity or anonymous).
 - Legal rights guides: 14 topics in English and Hindi (road accidents, police refusing an FIR, domestic violence, arrest rights, free legal aid and more), each with the relevant law and step-by-step actions such as FIR, medical record and compensation claim.
 - Legal rights and action advisor *(in progress)*: describe the problem in plain words (e.g. "I was injured in a road accident") and get the matching guide.
+- Track my case shows the court office’s recorded milestones and source pages. When the desktop has a signed transcript, it groups timestamped excerpts by topic.
+- The settlement estimator in Track my case calculates upfront payments, instalments and costs from the citizen’s entries. The calculation stays in the browser or desktop window.
 
 ## The AI - trained on old Indian cases
 
