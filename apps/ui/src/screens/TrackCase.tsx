@@ -49,11 +49,14 @@ export function findCase(cases: CaseRecord[], reference: string): CaseRecord | u
 
 export function caseDates(record: CaseRecord, today: string) {
   const events = [...record.events].sort((a, b) => a.on.localeCompare(b.on));
+  const upcoming = events.filter(event => event.on > today && event.kind !== 'adjournment');
   return {
     past: events.filter(event => event.on <= today),
-    next: events.find(event => event.on > today && (event.kind === 'hearing' || event.kind === 'other')) ?? events.find(event => event.on > today),
+    next: upcoming.find(event => event.kind === 'hearing' || event.kind === 'other') ?? upcoming[0],
   };
 }
+
+const isHearingEvent = (event: CourtEvent) => event.kind === 'hearing' || event.kind === 'adjournment';
 
 function CaseHistory({ events }: { events: CourtEvent[] }) {
   const byDate = new Map<string, CourtEvent[]>();
@@ -63,16 +66,20 @@ function CaseHistory({ events }: { events: CourtEvent[] }) {
     else byDate.set(event.on, [event]);
   }
   if (!byDate.size) return <p className="text-sm">{t('track.noHistory', 'No court events have been recorded here yet.')}</p>;
-  const latestHearing = events.filter(event => event.kind === 'hearing').at(-1)?.on;
+  const latestHearing = events.filter(isHearingEvent).at(-1)?.on;
   return <ol className="space-y-2 text-sm">{Array.from(byDate, ([date, day]) => {
-    const hasHearing = day.some(event => event.kind === 'hearing');
+    const heading = day.some(event => event.kind === 'hearing') ? t('track.hearing.recorded', 'Recorded hearing')
+      : t('track.hearing.adjourned', 'Recorded postponement');
     const entries = day.map((event, index) => <li key={event.kind + '-' + index}>
       {EVENT_WORDS[event.kind]}{event.note ? ' — ' + event.note : ''}
+      {event.kind === 'adjournment' && event.adjournment && <p>
+        {t('track.hearing.daysGranted', 'Time granted (days)')}{' '}{event.adjournment.daysGranted}
+      </p>}
       {event.source?.page && <p>{t('track.hearing.orderPage', 'Source document page')} {event.source.page}</p>}
     </li>);
-    if (hasHearing) return <li key={date}>
+    if (day.some(isHearingEvent)) return <li key={date}>
       <details className="rounded border p-2" open={date === latestHearing}>
-        <summary className="font-medium"><time dateTime={date}>{date}</time> · {t('track.hearing.recorded', 'Recorded hearing')}</summary>
+        <summary className="font-medium"><time dateTime={date}>{date}</time> · {heading}</summary>
         <p className="mt-2">{t('track.hearing.recordedItems', 'What the court office recorded that day')}</p>
         <ul className="list-disc pl-5">{entries}</ul>
         {day.every(event => event.kind === 'hearing' && !event.note) &&

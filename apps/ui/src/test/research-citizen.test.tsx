@@ -215,6 +215,26 @@ describe('Track my case', () => {
     expect(await screen.findByText(/could not find a unique case with that number/)).toBeInTheDocument();
   });
 
+  it('shows the recorded postponement without presenting it as a future hearing', async () => {
+    const postponed = {
+      ...fictionalCase,
+      events: [
+        { on: '2026-01-05', kind: 'adjournment' as const, note: 'The office recorded a postponement.',
+          adjournment: { requestedBy: 'court' as const, reason: 'bench_unavailable' as const, daysGranted: 14 } },
+        { on: '2999-01-01', kind: 'adjournment' as const },
+      ],
+    };
+    wrap(<TrackCase />, mockApi({ listCases: vi.fn(async () => [postponed]) }));
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Case number or CNR'), 'FICTIONAL 7/2026');
+    await user.click(screen.getByRole('button', { name: 'Find my case' }));
+    const status = await screen.findByRole('region', { name: 'Case status' });
+    expect(status).toHaveTextContent('Recorded postponement');
+    expect(status).toHaveTextContent('Time granted (days) 14');
+    expect(status).toHaveTextContent('No next date recorded here yet');
+    expect(status).not.toHaveTextContent('2999-01-01');
+  });
+
   it('groups material from the latest signed transcript of the selected case and keeps other cases out', async () => {
     const selected = { id: 'hearing-1', caseId: fictionalCase.id, startedAt: '2026-01-06T19:00:00Z', state: 'recorded' as const, transcriptVersions: 3 };
     const signed = {

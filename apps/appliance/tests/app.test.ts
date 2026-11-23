@@ -240,12 +240,17 @@ describe.sequential('CourtPlus Cloud', () => {
     const saved = await api('dlsa', 'POST', '/api/saveCase', [
       { ...person, name: privateMarker },
       { ...record, cnr: 'FICTIONAL-CNR-990001', caseNo: 'private-order-ref', court: privateMarker,
-        events: [{ kind: 'remand', on: '2022-01-01', note: privateMarker, source: {
-          docId: 'doc990001', quote: privateMarker, verifiedBy: privateMarker,
-        } }] },
+        events: [
+          { kind: 'remand', on: '2022-01-01', note: privateMarker,
+            source: { docId: 'doc990001', quote: privateMarker, verifiedBy: privateMarker } },
+          { kind: 'adjournment', on: '2022-01-02', note: privateMarker,
+            adjournment: { requestedBy: 'court', reason: 'bench_unavailable', daysGranted: 14, recordedJustification: privateMarker } },
+        ] },
     ]);
     expect(saved.statusCode).toBe(204);
     const cases = await api('legal_aid', 'POST', '/api/listCases', []);
+    expect(cases.json<CaseRecord[]>().find(item => item.id === record.id)?.events)
+      .toContainEqual({ kind: 'adjournment', on: '2022-01-02' });
     expect(cases.body).not.toContain(privateMarker);
     expect(cases.body).not.toContain('FICTIONAL-CNR');
     expect(cases.body).not.toContain('private-order-ref');

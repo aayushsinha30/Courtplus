@@ -24,7 +24,7 @@ const person = z.object({
 });
 const eventKind = z.enum([
   'remand', 'chargesheet', 'framing', 'bail_granted', 'bail_rejected',
-  'acquitted', 'convicted', 'released', 'hearing', 'other',
+  'acquitted', 'convicted', 'released', 'hearing', 'adjournment', 'other',
 ]);
 const caseRecord = z.object({
   id, personId: id, orderDate: date.optional(), charges: z.array(charge).max(100),
