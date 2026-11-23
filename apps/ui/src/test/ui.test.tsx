@@ -9,12 +9,33 @@ import { CaseView } from '../screens/CaseView';
 import { ImportOrder } from '../screens/ImportOrder';
 import { Drafts } from '../screens/Drafts';
 import { Verifier } from '../screens/Verifier';
+import { JudgeDashboard } from '../screens/JudgeDashboard';
 
 // Fictional test fixtures only.
 const mockApi = (over: Partial<CourtPlusApi>): CourtPlusApi => ({
   listPersons: vi.fn(async () => []), listCases: vi.fn(async () => []), importOrder: vi.fn(),
   saveCase: vi.fn(), screen: vi.fn(), board: vi.fn(async () => []), updateCard: vi.fn(),
   exportDraft: vi.fn(), exportScReturn: vi.fn(), verify: vi.fn(), stats: vi.fn(), role: vi.fn(),
+  analyzeAdjournments: vi.fn(async () => ({
+    caseId: 'c1', totalAdjournments: 0, totalDelayDays: 0, averageAdjournmentSpanDays: 0,
+    partyBreakdown: { petitioner: 0, respondent: 0, prosecution: 0, court: 0, joint: 0, other: 0 },
+    reasonsBreakdown: { counsel_absent: 0, witness_absent: 0, documents_awaited: 0, interlocutory_application: 0, settlement_talks: 0, bench_unavailable: 0, police_report_pending: 0, general: 0 },
+    order17Rule1Exceeded: false, bnss346DayToDayViolation: false, riskLevel: 'LOW' as const, events: [],
+    recommendation: { earliestDate: '2026-03-09', suggestedDays: 7, docketLoadLevel: 'light' as const, statutoryAdvice: ['On track'], justificationRequired: false },
+    statutoryWarnings: [],
+  })),
+  judgeDashboard: vi.fn(async () => ({
+    asOf: '2026-03-01', totalJudges: 1, totalActiveCases: 0, totalDisposedCases: 10, benchClearanceRate: 100,
+    stateNjdg10YearComparison: { district10YearPending: 5256293, chhattisgarh10YearPending: 1166, ratioToNational: 0.02 },
+    judges: [{
+      judgeName: 'Hon. Justice Sharma', courtRoom: 'Room 1', court: 'Sessions Court',
+      activeCases: 0, disposedCases: 10, totalFiled: 10, clearanceRate: 100, disposalVelocity: 8,
+      avgCaseLifespanDays: 95, totalAdjournmentsGranted: 4, adjournmentRatio: 0.8,
+      aging: { under1Year: 0, oneToThreeYears: 0, threeToFiveYears: 0, fiveToTenYears: 0, overTenYears: 0 },
+      timeline: [{ date: '2026-02-01', filed: 10, disposed: 10, clearanceRate: 100 }],
+      byCaseType: { criminal: { pending: 0, disposed: 10 } },
+    }],
+  })),
   ...over,
 } as CourtPlusApi);
 
@@ -152,5 +173,15 @@ describe('Import confirm / reject', () => {
     const s1 = screen.getByTestId('suggestion-1');
     await userEvent.click([...s1.querySelectorAll('button')].find((b) => b.textContent === 'Reject')!);
     expect(s1).toHaveTextContent('Rejected');
+  });
+});
+
+describe('Judge Performance & Backlog Dashboard', () => {
+  it('renders clearance rate KPI and NJDG aging breakdown', async () => {
+    wrap(mockApi({}), <JudgeDashboard />);
+    expect((await screen.findAllByText(/100%/)).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Arrears Reducing/)).toBeInTheDocument();
+    expect(screen.getByText('52,56,293 cases')).toBeInTheDocument();
+    expect(screen.getByText('1,166 cases')).toBeInTheDocument();
   });
 });

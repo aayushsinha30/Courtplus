@@ -29,6 +29,7 @@ import { Research } from './screens/Research';
 import { RightsAdvisor } from './screens/RightsAdvisor';
 import { TrackCase } from './screens/TrackCase';
 import { dashboardTitle, ROLE_NAV, useRole } from './lib/roles';
+import { JudgeDashboard } from './screens/JudgeDashboard';
 
 type NavItem = { to: string; key: string; label: string; icon: IconName };
 const NAV: NavItem[] = [
@@ -47,6 +48,7 @@ const NAV: NavItem[] = [
   { to: '/drafts', key: 'nav.drafts', label: 'Drafts', icon: 'drafts' },
   { to: '/lawyer/case', key: 'nav.caseAnalyzer', label: 'Case analyzer', icon: 'cases' },
   { to: '/lawyer', key: 'nav.settlement', label: 'Settlement', icon: 'drafts' },
+  { to: '/judge-dashboard', key: 'nav.judge_dashboard', label: 'Judge Dashboard', icon: 'stats' },
   { to: '/sc-return', key: 'nav.sc', label: 'SC return', icon: 'sheet' },
   { to: '/verify', key: 'nav.verify', label: 'Verifier', icon: 'verify' },
   { to: '/evidence', key: 'nav.evidence', label: 'Evidence inbox', icon: 'verify' },
@@ -136,6 +138,7 @@ export function App({ importScreen, settingsScreen }: { importScreen?: ReactNode
             <Route path="/lawyer/case" element={<CaseAnalyzer />} />
             <Route path="/sc-return" element={<ScReturn />} />
             <Route path="/verify" element={<Verifier />} />
+            <Route path="/judge-dashboard" element={<JudgeDashboard />} />
             <Route path="/evidence" element={<EvidenceInbox />} />
             <Route path="/submit-proof" element={<SubmitProof initialRole="citizen" />} />
             <Route path="/file-evidence" element={<SubmitProof initialRole="lawyer" />} />

@@ -1,4 +1,10 @@
 import '@testing-library/jest-dom/vitest';
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
+
+afterEach(() => {
+  cleanup();
+});
 
 if (!globalThis.ResizeObserver) {
   // JSDOM supplies no layout measurements for responsive charts.
@@ -54,4 +60,13 @@ if (typeof File !== 'undefined' && !File.prototype.text) {
     });
   };
 }
+
+if (typeof globalThis !== 'undefined' && !globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+}
+
 

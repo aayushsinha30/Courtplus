@@ -52,6 +52,8 @@ One slide gives the model's accuracy on test data and what we found in the real 
 - A second small AI model that tells what each date means (arrest, remand, bail)
 - Reading scanned (photographed) orders
 - Hindi draft
+- **Adjournment (Postponement) Analyzer**: Tracks delay patterns per party, enforces the 3-adjournment statutory ceiling under CPC Order XVII Rule 1 proviso, checks BNSS Section 346 day-to-day criminal trial mandates, and generates workload-based scheduling recommendations to prevent docket overloading.
+- **Judge Performance & Backlog Dashboard**: Real-time daily filings vs. resolutions analytics for individual judges, clearance rate KPI (target ≥100%), NJDG statutory case aging pyramid (<1y, 1–3y, 3–5y, 5–10y, >10y), and comparative benchmarks against official data.gov.in figures.
 
 ## C. Never built, and why
 
