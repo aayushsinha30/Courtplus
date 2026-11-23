@@ -42,6 +42,17 @@ const evidenceSchema = [
   'CREATE INDEX evidence_files_submission ON evidence_files(submission_id)',
 ];
 
+const vaultSchema = [
+  "ALTER TABLE evidence_submissions ADD COLUMN channel TEXT NOT NULL DEFAULT 'identified' CHECK (channel IN ('identified', 'anonymous'))",
+  'CREATE TABLE evidence_legacy (id TEXT PRIMARY KEY REFERENCES evidence_submissions(id)) STRICT',
+  'INSERT INTO evidence_legacy SELECT id FROM evidence_submissions',
+  'CREATE TABLE evidence_custody (seq INTEGER PRIMARY KEY CHECK (seq > 0), submission_id TEXT NOT NULL REFERENCES evidence_submissions(id), action TEXT NOT NULL, envelope TEXT NOT NULL CHECK (json_valid(envelope)), head TEXT NOT NULL) STRICT',
+  'CREATE INDEX evidence_custody_by_submission ON evidence_custody(submission_id, seq)',
+  "CREATE UNIQUE INDEX evidence_one_seal ON evidence_custody(submission_id) WHERE action IN ('receive', 'legacy')",
+  "CREATE TRIGGER evidence_files_only_before_seal BEFORE INSERT ON evidence_files WHEN EXISTS (SELECT 1 FROM evidence_custody WHERE submission_id = NEW.submission_id AND action IN ('receive', 'legacy')) BEGIN SELECT RAISE(ABORT, 'evidence submission is sealed'); END",
+];
+const immutableEvidenceTables = ['evidence_submissions', 'evidence_files', 'evidence_legacy', 'evidence_custody'];
+
 export function openDb(path: string, secretPath: string): Db {
   const key = readFileSync(secretPath, 'utf8').trim();
   if (!/^[0-9a-f]{64}$/i.test(key)) throw new Error('SQLCipher secret must contain 32 hex-encoded bytes');
@@ -54,11 +65,18 @@ export function openDb(path: string, secretPath: string): Db {
     db.pragma('recursive_triggers=ON');
     db.transaction(() => {
       const version = db.pragma('user_version', { simple: true });
-      if (version === 2) return;
-      if (version !== 0 && version !== 1) throw new Error('Unsupported CourtPlus Cloud database version');
+      if (version === 3) return;
+      if (version !== 0 && version !== 1 && version !== 2) throw new Error('Unsupported CourtPlus Cloud database version');
       if (version === 0) for (const sql of schema) db.exec(sql);
-      for (const sql of evidenceSchema) db.exec(sql);
-      db.pragma('user_version=2');
+      if (version !== 2) for (const sql of evidenceSchema) db.exec(sql);
+      for (const sql of vaultSchema) db.exec(sql);
+      for (const table of immutableEvidenceTables) {
+        for (const operation of ['UPDATE', 'DELETE']) {
+          db.exec("CREATE TRIGGER " + table + '_no_' + operation + ' BEFORE ' + operation + ' ON ' + table
+            + " BEGIN SELECT RAISE(ABORT, 'evidence vault is append-only'); END");
+        }
+      }
+      db.pragma('user_version=3');
     }).immediate();
     return db;
   } catch (error) {

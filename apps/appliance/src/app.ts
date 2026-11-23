@@ -18,6 +18,7 @@ import { apiInputs, caseRoles, date, digest, envelopes, id, maxVerifyBase64, typ
 import { createReceipts, receiptRoutes } from './receipts.js';
 import { exportRoutes } from './exports.js';
 import { evidenceRoutes } from './evidence.js';
+import { openVault, VaultIntegrityError } from './vault.js';
 
 const all = caseRoles;
 const editors = ['superintendent', 'dlsa', 'legal_aid'] as const;
@@ -57,6 +58,8 @@ export interface Options {
   prison?: string;
   district?: string;
   evidenceEnabled?: boolean;
+  evidenceKeyFile?: string;
+  evidenceCheckpointFile?: string;
   logger?: FastifyServerOptions['logger'];
 }
 
@@ -83,6 +86,7 @@ export async function buildApp(options: Options) {
   app.addHook('onRequest', async (_, reply) => { reply.header('cache-control', 'no-store'); });
   app.setErrorHandler((error, _, reply) => {
     if (error instanceof HttpError) return reply.code(error.statusCode).send({ error: error.code });
+    if (error instanceof VaultIntegrityError) return reply.code(409).send({ error: 'EVIDENCE_INTEGRITY_FAILED' });
     const status = error instanceof Error && 'statusCode' in error ? Number(error.statusCode) : 500;
     if (status >= 400 && status < 500) return reply.code(status).send({ error: 'REQUEST_REJECTED' });
     app.log.error({ err: error }, 'CourtPlus Cloud request failed');
@@ -90,7 +94,13 @@ export async function buildApp(options: Options) {
   });
 
   const { authenticate, authorize } = await authRoutes(app, db, origin);
-  if (options.evidenceEnabled) await evidenceRoutes(app, db, origin, now, authorize);
+  if (options.evidenceEnabled) {
+    const vault = openVault(db, options.evidenceKeyFile ?? (db.name + '.evidence-key.pem'), now);
+    if (options.evidenceCheckpointFile) {
+      vault.verifyVault(JSON.parse(readFileSync(options.evidenceCheckpointFile, 'utf8')));
+    }
+    await evidenceRoutes(app, db, origin, now, authorize, vault);
+  }
   const handoffs = createHandoffs(db, options.handoffDueMs ?? 60 * 60_000, now);
   const { notify } = handoffRoutes(app, handoffs, (request, write, role) =>
     authorize(request, role ? [role] : handoffReaders, write), options.tickMs ?? 1000);

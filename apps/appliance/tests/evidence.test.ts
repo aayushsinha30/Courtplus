@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { addAccount } from '../src/auth.js';
 import { openDb, verifyAudit, type Db } from '../src/db.js';
+import { openVault, verifyExhibit } from '../src/vault.js';
 
 const origin = 'https://courtplus.example.test';
 const password = 'fictional evidence inbox password';
@@ -60,7 +61,7 @@ describe.sequential('Citizen evidence intake', () => {
     await addAccount(db, 'judge', password, 'judge');
     await addAccount(db, 'admin', password, 'admin');
     // Reopen the pre-evidence schema while retaining its existing accounts.
-    db.exec('DROP TABLE evidence_files; DROP TABLE evidence_submissions; PRAGMA user_version=1');
+    db.exec('DROP TABLE evidence_custody; DROP TABLE evidence_legacy; DROP TABLE evidence_files; DROP TABLE evidence_submissions; PRAGMA user_version=1');
     db.close();
     db = openDb(dbPath, secret);
     app = await start();
@@ -85,7 +86,7 @@ describe.sequential('Citizen evidence intake', () => {
     const reply = await upload(form);
     expect(reply.statusCode, reply.body).toBe(201);
     const { reference } = reply.json<{ reference: string }>();
-    expect(reply.json()).toEqual({ reference, receivedAt, fileCount: 5 });
+    expect(reply.json()).toMatchObject({ reference, receivedAt, fileCount: 5 });
     detail = inbox + '/' + reference;
 
     expect((await app.inject({ url: '/', headers: judge })).headers.location).toBe(inbox);
@@ -94,6 +95,7 @@ describe.sequential('Citizen evidence intake', () => {
     expect((await app.inject({ url: inbox, headers: judge })).body).toContain(detail);
     const view = await app.inject({ url: detail, headers: judge });
     expect(view.body).toContain('Fictional Citizen');
+    expect(view.body).toContain(createHash('sha256').update(photo).digest('hex'));
     expect(view.body).toContain('&lt;script&gt;case reference&lt;/script&gt;');
     expect(view.body).not.toContain('<script>case reference</script>');
     download = view.body.match(/href="([^"]+)">exhibit\.jpg<\/a>/)![1];
@@ -109,6 +111,19 @@ describe.sequential('Citizen evidence intake', () => {
     expect(verifyAudit(db).valid).toBe(true);
     const custody = db.prepare('SELECT action FROM audit_log WHERE action LIKE ? ORDER BY id').pluck().all('evidence.%');
     expect(custody).toEqual(['evidence.receive', 'evidence.open', 'evidence.download']);
+    const report = await app.inject({ url: detail + '/section-63', headers: judge });
+    expect(report.body).toContain('Part B preparation');
+    expect(report.body).toContain('exhibit.jpg');
+    expect((await app.inject(detail + '/manifest')).statusCode).toBe(401);
+    const manifest = await app.inject({ url: detail + '/manifest', headers: judge });
+    expect(manifest.rawPayload.length).toBeGreaterThan(0);
+    expect(manifest.json()).toEqual(reply.json().receipt);
+    const vault = openVault(db, dbPath + '.evidence-key.pem');
+    expect(verifyExhibit(photo, download.split('/').at(-1)!, manifest.json(), vault.pem).name).toBe('exhibit.jpg');
+    expect(vault.verifyVault()).toMatchObject({ submissions: 1, entries: 5 });
+    const events = await app.inject({ url: detail + '/custody', headers: judge });
+    expect(events.json().map((entry: { payload: { action: string } }) => entry.payload.action))
+      .toEqual(['receive', 'open', 'download', 'section63', 'manifest', 'custody']);
   });
 
   test('rejects invalid and oversized uploads without partially storing a submission', async () => {
@@ -129,6 +144,8 @@ describe.sequential('Citizen evidence intake', () => {
   });
 
   test('keeps uploads available after restart and hides intake when disabled', async () => {
+    const first = openVault(db, dbPath + '.evidence-key.pem');
+    const checkpoint = first.checkpoint();
     await app.close();
     db.close();
     db = openDb(dbPath, secret);
@@ -137,7 +154,27 @@ describe.sequential('Citizen evidence intake', () => {
     expect((await app.inject({ url: inbox, headers: judge })).statusCode).toBe(404);
     await app.close();
     app = await start();
+    const reopened = openVault(db, dbPath + '.evidence-key.pem');
+    expect(reopened.pem).toBe(first.pem);
+    expect(reopened.verifyVault(checkpoint).submissions).toBe(1);
     expect((await app.inject({ url: detail, headers: judge })).statusCode).toBe(200);
     expect((await app.inject({ url: download, headers: judge })).rawPayload).toEqual(Buffer.from(photo));
+  });
+
+  test('rejects storage tampering and detects rollback against a saved checkpoint', async () => {
+    const keyPath = dbPath + '.evidence-key.pem';
+    const vault = openVault(db, keyPath);
+    const checkpoint = vault.checkpoint();
+    const id = download.split('/').at(-1)!;
+    expect(() => db.prepare('UPDATE evidence_files SET content = zeroblob(byte_length) WHERE id = ?').run(id)).toThrow(/append-only/);
+    expect(() => db.exec('DELETE FROM evidence_custody')).toThrow(/append-only/);
+    db.exec('DROP TRIGGER evidence_custody_no_DELETE');
+    db.prepare('DELETE FROM evidence_custody WHERE seq = ?').run(checkpoint.payload.count);
+    expect(() => vault.verifyVault(checkpoint)).toThrow(/checkpoint/);
+    db.exec('DROP TRIGGER evidence_files_no_UPDATE');
+    db.prepare('UPDATE evidence_files SET content = zeroblob(byte_length) WHERE id = ?').run(id);
+    expect((await app.inject({ url: download, headers: judge })).statusCode).toBe(409);
+    expect(() => vault.verifyVault()).toThrow(/contents/);
+    expect(() => openVault(db, keyPath + '.missing')).toThrow(/original evidence signing key/);
   });
 });

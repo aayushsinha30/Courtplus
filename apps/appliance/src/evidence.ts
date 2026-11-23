@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { allowedOrigin, type Session } from './auth.js';
 import { audit, type Db } from './db.js';
 import { html, HttpError, page, parse, requireValue } from './http.js';
+import type { EvidenceMetadata, openVault } from './vault.js';
 
 const MiB = 1024 * 1024;
 const maxFile = 25 * MiB;
@@ -30,10 +31,7 @@ const inboxQuery = z.strictObject({
   before: z.string().regex(/^[1-9]\d{0,14}$/).transform(Number).optional(),
 });
 const judgeNav = '<nav><a href="/judge/evidence">Evidence inbox</a> <button id="sign-out" type="button">Sign out</button></nav>';
-type Submission = {
-  seq: number; id: string; receivedAt: string; submittedBy: string; caseReference: string; statement: string;
-};
-type EvidenceFile = { id: string; name: string; byteLength: number };
+type InboxEntry = Omit<EvidenceMetadata, 'statement'> & { seq: number };
 type JudgeAccess = (request: FastifyRequest, roles: readonly ['judge']) => Session;
 
 function attachment(name: string) {
@@ -41,19 +39,17 @@ function attachment(name: string) {
   return 'attachment; filename="evidence' + extname(name).toLowerCase() + '"; filename*=UTF-8\'\'' + encoded;
 }
 
-export async function evidenceRoutes(app: FastifyInstance, db: Db, origin: string, now: () => number, authorize: JudgeAccess) {
-  const inbox = db.prepare<[number, number], Omit<Submission, 'statement'>>(
-    'SELECT seq, id, received_at AS receivedAt, submitted_by AS submittedBy, case_reference AS caseReference'
+export async function evidenceRoutes(app: FastifyInstance, db: Db, origin: string, now: () => number,
+  authorize: JudgeAccess, vault: ReturnType<typeof openVault>) {
+  const inbox = db.prepare<[number, number], InboxEntry>(
+    'SELECT seq, id, received_at AS receivedAt, submitted_by AS submittedBy, case_reference AS caseReference, channel'
     + ' FROM evidence_submissions WHERE seq < ? ORDER BY seq DESC LIMIT ?',
   );
-  const submission = db.prepare<[string], Submission>(
-    'SELECT seq, id, received_at AS receivedAt, submitted_by AS submittedBy, case_reference AS caseReference, statement'
+  const submission = db.prepare<[string], EvidenceMetadata>(
+    'SELECT id, received_at AS receivedAt, submitted_by AS submittedBy, case_reference AS caseReference, statement, channel'
     + ' FROM evidence_submissions WHERE id = ?',
   );
-  const files = db.prepare<[string], EvidenceFile>(
-    'SELECT id, name, byte_length AS byteLength FROM evidence_files WHERE submission_id = ? ORDER BY rowid',
-  );
-  const file = db.prepare<[string, string], EvidenceFile & { content: Buffer }>(
+  const file = db.prepare<[string, string], { id: string; name: string; content: Buffer }>(
     'SELECT id, name, content FROM evidence_files WHERE submission_id = ? AND id = ?',
   );
   const used = db.prepare<[], { bytes: number }>('SELECT COALESCE(SUM(byte_length), 0) AS bytes FROM evidence_files');
@@ -71,7 +67,8 @@ export async function evidenceRoutes(app: FastifyInstance, db: Db, origin: strin
     '<label>Note for the court, optional<textarea name="statement" rows="4" maxlength="4000"></textarea></label>',
     '<label>Files<input type="file" name="evidence" accept="' + [...extensions].join(',') + '" multiple required aria-describedby="upload-limits"></label>',
     '<p id="upload-limits">Up to 5 files, 25 MiB per file and 40 MiB in total.</p>',
-    '<button type="submit">Send to the court</button><p role="status"></p></form>',
+    '<button type="submit">Send to the court</button><p role="status"></p>',
+    '<a id="evidence-receipt" download="courtplus-evidence-receipt.json" hidden>Download signed receipt</a></form>',
   ].join(''), 'evidence-upload'));
 
   await app.register(async upload => {
@@ -113,13 +110,14 @@ export async function evidenceRoutes(app: FastifyInstance, db: Db, origin: strin
         const input = parse(submissionFields, fields);
         const id = randomUUID();
         const receivedAt = new Date(now()).toISOString();
-        db.transaction(() => {
+        const receipt = db.transaction(() => {
           if (used.get()!.bytes + total > storageLimit) throw new HttpError(503, 'EVIDENCE_STORAGE_FULL');
           addSubmission.run(id, receivedAt, input.submittedBy, input.caseReference, input.statement);
           for (const entry of attachments) addFile.run(entry.id, id, entry.name, entry.content.length, entry.content);
           audit(db, 'citizen', 'evidence.receive', { submissionId: id, fileIds: attachments.map(entry => entry.id) });
+          return vault.seal({ id, receivedAt, ...input, channel: 'identified' }, attachments);
         }).immediate();
-        return reply.code(201).send({ reference: id, receivedAt, fileCount: attachments.length });
+        return reply.code(201).send({ reference: id, receivedAt, fileCount: attachments.length, receipt });
       } finally {
         activeUploads -= 1;
       }
@@ -142,29 +140,85 @@ export async function evidenceRoutes(app: FastifyInstance, db: Db, origin: strin
     return page(reply, 'Evidence inbox', judgeNav + (content.length ? '<ul>' + content.join('') + '</ul>' : '<p>No submissions.</p>') + older, 'judge-evidence');
   });
 
-  app.get('/judge/evidence/:submissionId', async (request, reply) => {
+  app.get('/judge/evidence/:submissionId', { exposeHeadRoute: false }, async (request, reply) => {
     const judge = authorize(request, ['judge']);
     const { submissionId } = parse(submissionParams, request.params);
     const row = requireValue(submission.get(submissionId));
-    const attachments = files.all(submissionId);
-    db.transaction(() => audit(db, judge.id, 'evidence.open', { submissionId })).immediate();
-    const links = attachments.map(entry => '<li><a href="/judge/evidence/' + row.id + '/files/' + entry.id + '">'
-      + html(entry.name) + '</a> (' + entry.byteLength.toLocaleString('en-IN') + ' bytes)</li>');
+    const { payload } = vault.getSeal(row);
+    db.transaction(() => {
+      audit(db, judge.id, 'evidence.open', { submissionId });
+      vault.record(submissionId, judge.id, { action: 'open' });
+    }).immediate();
+    const links = payload.manifest.files.map(entry => '<li><a href="/judge/evidence/' + row.id + '/files/' + entry.id + '">'
+      + html(entry.name) + '</a> (' + entry.bytes.toLocaleString('en-IN') + ' bytes)'
+      + '<br>SHA-256 <code>' + entry.sha256 + '</code></li>');
     return page(reply, 'Evidence submission', judgeNav + '<dl>'
       + '<dt>Submission reference</dt><dd>' + row.id + '</dd>'
       + '<dt>Received (UTC)</dt><dd>' + row.receivedAt + '</dd>'
+      + '<dt>Sealed (UTC)</dt><dd>' + payload.at + (payload.action === 'legacy' ? ' · sealed after migration' : '') + '</dd>'
       + '<dt>Name supplied by submitter</dt><dd>' + html(row.submittedBy) + '</dd>'
       + '<dt>Case reference</dt><dd>' + html(row.caseReference || 'None supplied') + '</dd>'
       + '<dt>Note</dt><dd class="evidence-note">' + html(row.statement || 'None supplied') + '</dd></dl>'
       + '<h2>Original files</h2><p>Files are supplied by the sender. Open downloaded files in a protected viewer.</p>'
-      + '<ul>' + links.join('') + '</ul>', 'judge-evidence');
+      + '<ul>' + links.join('') + '</ul><p><a href="/judge/evidence/' + row.id + '/manifest">Download signed manifest</a> · '
+      + '<a href="/judge/evidence/' + row.id + '/section-63">Section 63 hash report and worksheet</a> · '
+      + '<a href="/judge/evidence/' + row.id + '/custody">Download custody trail</a></p>', 'judge-evidence');
   });
 
-  app.get('/judge/evidence/:submissionId/files/:fileId', async (request, reply) => {
+  app.get('/judge/evidence/:submissionId/files/:fileId', { exposeHeadRoute: false }, async (request, reply) => {
     const judge = authorize(request, ['judge']);
     const { submissionId, fileId } = parse(fileParams, request.params);
+    const row = requireValue(submission.get(submissionId));
     const entry = requireValue(file.get(submissionId, fileId));
-    db.transaction(() => audit(db, judge.id, 'evidence.download', { submissionId, fileId })).immediate();
+    vault.verifyFile(row, entry);
+    db.transaction(() => {
+      audit(db, judge.id, 'evidence.download', { submissionId, fileId });
+      vault.record(submissionId, judge.id, { action: 'download', fileId });
+    }).immediate();
     return reply.type('application/octet-stream').header('content-disposition', attachment(entry.name)).send(entry.content);
+  });
+
+  app.get('/judge/evidence/:submissionId/manifest', { exposeHeadRoute: false }, async (request, reply) => {
+    const judge = authorize(request, ['judge']);
+    const { submissionId } = parse(submissionParams, request.params);
+    const seal = vault.verifySubmission(requireValue(submission.get(submissionId)));
+    db.transaction(() => vault.record(submissionId, judge.id, { action: 'manifest' })).immediate();
+    return reply.header('content-disposition', 'attachment; filename="courtplus-evidence-manifest.json"').send(seal);
+  });
+
+  app.get('/judge/evidence/:submissionId/custody', { exposeHeadRoute: false }, async (request, reply) => {
+    const judge = authorize(request, ['judge']);
+    const { submissionId } = parse(submissionParams, request.params);
+    vault.getSeal(requireValue(submission.get(submissionId)));
+    const events = db.transaction(() => {
+      vault.record(submissionId, judge.id, { action: 'custody' });
+      return vault.evidenceHistory(submissionId);
+    }).immediate();
+    return reply.header('content-disposition', 'attachment; filename="courtplus-evidence-custody.json"').send(events);
+  });
+
+  app.get('/judge/evidence/:submissionId/section-63', { exposeHeadRoute: false }, async (request, reply) => {
+    const judge = authorize(request, ['judge']);
+    const { submissionId } = parse(submissionParams, request.params);
+    const { payload } = vault.verifySubmission(requireValue(submission.get(submissionId)));
+    db.transaction(() => vault.record(submissionId, judge.id, { action: 'section63' })).immediate();
+    const fileHashes = payload.manifest.files.map(entry => '<li>' + html(entry.name) + ' · '
+      + entry.bytes + ' bytes<br>File reference ' + entry.id + '<br>SHA-256 <code>' + entry.sha256 + '</code></li>');
+    const worksheet = (heading: string, fields: string[]) => '<h2>' + heading + '</h2><dl>'
+      + fields.map(field => '<dt>' + field + '</dt><dd>________________________________________________</dd>').join('') + '</dl>';
+    const signoff = ['Name and designation', 'Signature', 'Date, time (IST), and place'];
+    return page(reply, 'Section 63 hash report and worksheet',
+      '<p><strong>For preparation and review.</strong> Attach this hash report to the applicable certificate. '
+      + 'The custodian and expert must supply their own particulars, attestations, and signatures.</p>'
+      + '<p><a href="https://www.ncrb.mha.gov.in/uploads/SankalanPortal/ScheduleBSA.html">Official Schedule</a></p>'
+      + '<dl><dt>Submission</dt><dd>' + submissionId + '</dd><dt>Recorded receipt (UTC)</dt><dd>' + payload.manifest.receivedAt + '</dd>'
+      + '<dt>Sealed (UTC)</dt><dd>' + payload.at + (payload.action === 'legacy' ? ' · sealed after migration' : '') + '</dd>'
+      + '<dt>CourtPlus seal key fingerprint</dt><dd><code>' + payload.keyId + '</code></dd>'
+      + '<dt>Canonical submission metadata SHA-256</dt><dd><code>' + payload.manifest.metadataSha256 + '</code></dd></dl>'
+      + '<h2>Exhibit hashes</h2>' + (fileHashes.length ? '<ul>' + fileHashes.join('') + '</ul>' : '<p>No file attachments.</p>')
+      + worksheet('Part A preparation · Custodian', ['Source, device type, make, model and identifiers',
+        'How the record was produced and copied', 'Control, regular operation and any interruptions', ...signoff])
+      + worksheet('Part B preparation · Expert', ['Examined source, device type, make, model and identifiers',
+        'Examined records and independent SHA-256 results', ...signoff]));
   });
 }

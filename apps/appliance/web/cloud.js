@@ -27,6 +27,7 @@
         EVIDENCE_EMPTY: 'Choose at least one non-empty file.',
         EVIDENCE_BUSY: 'The court is receiving other uploads. Try again shortly.',
         EVIDENCE_STORAGE_FULL: 'The court inbox cannot accept more files right now.',
+        EVIDENCE_INTEGRITY_FAILED: 'The stored evidence did not pass integrity verification.',
       }[payload.error];
       const fallback = response.status === 413 ? 'The upload exceeds the file or submission limits.'
         : response.status === 429 ? 'Try again in a minute.' : 'Request failed (' + response.status + ').';
@@ -127,6 +128,7 @@
     const form = document.querySelector('#evidence-upload');
     const status = form.querySelector('[role=status]');
     const button = form.querySelector('button[type=submit]');
+    const receiptLink = document.querySelector('#evidence-receipt');
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const files = Array.from(form.elements.evidence.files);
@@ -139,10 +141,13 @@
       button.disabled = true;
       status.textContent = 'Uploading…';
       try {
-        const { reference, fileCount } = await request(form.action, {
+        const { reference, fileCount, receipt } = await request(form.action, {
           method: 'POST', credentials: 'omit', body: new FormData(form),
         });
         form.reset();
+        if (!receiptLink.hidden) URL.revokeObjectURL(receiptLink.href);
+        receiptLink.href = URL.createObjectURL(new Blob([JSON.stringify(receipt, null, 2)], { type: 'application/json' }));
+        receiptLink.hidden = false;
         status.textContent = 'Received ' + fileCount + (fileCount === 1 ? ' file. ' : ' files. ')
           + 'Save your submission reference ' + reference + '.';
       } catch (error) {

@@ -35,7 +35,22 @@ Citizens visit **/submit-evidence** and enter their name, an optional case refer
 
 Judges sign in at **/login** and land at **/judge/evidence**. They can open the submission and download the original bytes. The appliance keeps attachments in its encrypted SQLite database and records receipt, opening and downloading in the existing audit log. The inbox accepts up to 1 GiB of attachment data per appliance. The submitter's name, case reference and note are self-reported, and attachments may contain executable or identifying content. Receipt in the inbox records delivery to this appliance.
 
-The evidence upload API accepts **POST /api/evidence/submissions** with multipart fields **submittedBy**, optional **caseReference** and **statement**, and one or more **evidence** files. It returns HTTP 201 and the **reference**, **receivedAt** and **fileCount**.
+The evidence upload API accepts **POST /api/evidence/submissions** with multipart fields **submittedBy**, optional **caseReference** and **statement**, and one or more **evidence** files. It returns HTTP 201 with the **reference**, **receivedAt**, **fileCount** and signed **receipt**. Citizens can save the receipt. Judges can download the same signed manifest and open a printable Section 63 hash report and worksheet.
+
+### Evidence vault verification
+
+The vault hashes the exact uploaded bytes with SHA-256 and signs the exhibit hashes, metadata fingerprint and appliance receipt time with a dedicated Ed25519 key. A signed, append-only custody chain records receipt and judge access. Downloads are checked against the signed manifest. Files from earlier versions are sealed during the upgrade. Their manifests separately identify the original recorded receipt time and the later migration seal.
+
+The default evidence key file is beside the database on the persistent appliance volume. Use **COURTPLUS_EVIDENCE_KEY_FILE** to choose a separate protected location. Back up this key separately from the database and restrict access to it. The server refuses to replace a missing key for an existing signed chain. Keep the public key and periodic signed checkpoints in separate write-once or independently controlled storage so database rollback can be detected. The signature seals the appliance clock reading. Independent proof of wall-clock time requires an external timestamp authority.
+
+Run these commands from the appliance runtime directory. Distribute the public key through a trusted channel before using it to verify exhibits.
+
+    node apps/appliance/dist/main.js evidence-public-key
+    node apps/appliance/dist/main.js evidence-checkpoint
+    node apps/appliance/dist/main.js verify-evidence [previously-retained-checkpoint.json]
+    node apps/appliance/dist/verify-exhibit.js FILE FILE_ID MANIFEST_JSON TRUSTED_PUBLIC_KEY_PEM
+
+An optional **COURTPLUS_EVIDENCE_CHECKPOINT_FILE** makes the server check the entire vault against a retained checkpoint before enabling the evidence inbox. The Section 63 report supplies SHA-256 values to accompany the applicable Schedule certificate. Its Part A and Part B worksheets leave source and device details, attestations and signatures for the responsible person and expert. The CourtPlus server seal authenticates the recorded digest and custody event. See the [official Schedule](https://www.ncrb.mha.gov.in/uploads/SankalanPortal/ScheduleBSA.html).
 
 ## HTTP and client integration
 

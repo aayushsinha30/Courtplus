@@ -5,9 +5,11 @@ import { openDb, verifyAudit } from './db.js';
 import { parse } from './http.js';
 import { password, roles, username } from './inputs.js';
 import { addIssuer } from './receipts.js';
+import { openVault } from './vault.js';
 
 const path = process.env.COURTPLUS_DB_PATH ?? '/var/lib/courtplus/courtplus.sqlite3';
 const key = process.env.COURTPLUS_DB_KEY_FILE ?? '/run/secrets/db_key';
+const evidenceKeyFile = process.env.COURTPLUS_EVIDENCE_KEY_FILE ?? (path + '.evidence-key.pem');
 const db = openDb(path, key);
 const [command, ...args] = process.argv.slice(2);
 
@@ -24,6 +26,15 @@ try {
     const result = verifyAudit(db);
     console.log(JSON.stringify(result));
     if (!result.valid) process.exitCode = 1;
+  } else if (command === 'evidence-public-key' || command === 'evidence-checkpoint' || command === 'verify-evidence') {
+    if (args.length > (command === 'verify-evidence' ? 1 : 0)) throw new Error('Unexpected evidence vault command argument');
+    const vault = openVault(db, evidenceKeyFile);
+    if (command === 'evidence-public-key') process.stdout.write(vault.pem);
+    else if (command === 'evidence-checkpoint') console.log(JSON.stringify(vault.checkpoint()));
+    else {
+      const checkpoint = args[0] ? JSON.parse(readFileSync(args[0], 'utf8')) : undefined;
+      console.log(JSON.stringify({ valid: true, ...vault.verifyVault(checkpoint) }));
+    }
   } else if (command === undefined) {
     const origin = process.env.APP_ORIGIN ?? 'https://localhost';
     const url = new URL(origin);
@@ -37,6 +48,8 @@ try {
       prison: process.env.COURTPLUS_PRISON,
       district: process.env.COURTPLUS_DISTRICT,
       evidenceEnabled: process.env.COURTPLUS_EVIDENCE_ENABLED === '1',
+      evidenceKeyFile,
+      evidenceCheckpointFile: process.env.COURTPLUS_EVIDENCE_CHECKPOINT_FILE,
     });
     app.addHook('onClose', async () => { db.close(); });
     for (const signal of ['SIGINT', 'SIGTERM'] as const) {
