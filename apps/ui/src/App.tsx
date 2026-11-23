@@ -3,6 +3,7 @@ import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-route
 import { Icon, type IconName } from './components/icons';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import { TopBar } from './components/TopBar';
+import { CourtPet } from './components/CourtPet';
 import { useApp } from './lib/context';
 import { WorkDataProvider } from './lib/deadlines';
 import { t, ui } from './lib/i18n';
@@ -171,5 +172,6 @@ export function App({ importScreen, settingsScreen }: { importScreen?: ReactNode
         </main>
       </div>
     </div>
+    <CourtPet role={role} canRecord={Boolean(window.courtplusHearing)} />
   </WorkDataProvider>;
 }

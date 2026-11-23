@@ -1,0 +1,151 @@
+.court-pet {
+  position: fixed;
+  z-index: 15;
+  inset-inline-end: max(18px, env(safe-area-inset-right));
+  inset-block-end: max(18px, env(safe-area-inset-bottom));
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.court-pet-launcher {
+  display: grid;
+  justify-items: center;
+  min-width: 68px;
+  padding: 4px 8px 6px;
+  border: 1px solid #d8d1f4;
+  border-radius: 22px;
+  background: #faf8ff;
+  color: #403365;
+  box-shadow: 0 4px 18px #21113c25;
+}
+
+.court-pet-launcher:hover,
+.court-pet-launcher[aria-expanded="true"] { background: #eee8ff; }
+.court-pet-name { font-size: 11px; font-weight: 750; line-height: 1.1; }
+
+.court-pet-owl {
+  position: relative;
+  display: block;
+  width: 47px;
+  height: 43px;
+  margin-block-end: 2px;
+  animation: court-pet-float 3.6s ease-in-out infinite;
+}
+
+.court-pet-body {
+  position: absolute;
+  inset: 8px 2px 1px;
+  border: 1px solid #61548f;
+  border-radius: 48% 48% 43% 43%;
+  background: linear-gradient(150deg, #b1a2e4 3%, #8874bc 70%, #7663a6);
+  box-shadow: inset 0 -3px #59488135;
+}
+
+.court-pet-tuft {
+  position: absolute;
+  top: 5px;
+  width: 14px;
+  height: 15px;
+  border-radius: 4px 11px 3px 11px;
+  background: #a090d3;
+  border: 1px solid #61548f;
+}
+
+.court-pet-tuft-left { left: 4px; transform: rotate(12deg); }
+.court-pet-tuft-right { right: 4px; transform: scaleX(-1) rotate(12deg); }
+.court-pet-feathers {
+  position: absolute;
+  inset: 5px 4px 4px;
+  border-radius: 45% 45% 49% 49%;
+  background: #fff1d8;
+}
+
+.court-pet-eye {
+  position: absolute;
+  top: 12px;
+  width: 6px;
+  height: 8px;
+  border-radius: 50%;
+  background: #292039;
+  box-shadow: inset 0 1px #62546f;
+  animation: court-pet-blink 5.2s ease-in-out infinite;
+}
+
+.court-pet-eye-left { left: 12px; }
+.court-pet-eye-right { right: 12px; }
+.court-pet-cheek { position: absolute; top: 21px; width: 6px; height: 3px; border-radius: 50%; background: #e998a4; }
+.court-pet-cheek-left { left: 8px; }
+.court-pet-cheek-right { right: 8px; }
+.court-pet-beak {
+  position: absolute;
+  top: 19px;
+  left: calc(50% - 3px);
+  width: 6px;
+  height: 5px;
+  background: #bd6529;
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+}
+
+@keyframes court-pet-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes court-pet-blink {
+  0%, 42%, 47%, 100% { transform: scaleY(1); }
+  44%, 45% { transform: scaleY(.12); }
+}
+
+.court-pet-panel {
+  width: min(338px, calc(100vw - 36px));
+  max-height: calc(100dvh - 106px);
+  overflow: auto;
+  border: 1px solid #d8d1f4;
+  border-radius: 24px;
+  background: #fff;
+  color: #28213b;
+  box-shadow: 0 12px 40px #21113c30;
+}
+
+.court-pet-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  background: #eee8ff;
+}
+
+.court-pet-header h2 { font-size: 15px; font-weight: 750; }
+.court-pet-header p, .court-pet-note { color: #605675; font-size: 12px; }
+.court-pet-close { min-width: 32px; min-height: 32px; font-size: 22px; line-height: 1; border-radius: 50%; }
+.court-pet-close:hover { background: #ddd3fa; }
+.court-pet-content { display: grid; gap: 10px; padding: 14px 16px; }
+.court-pet-reply { padding: 10px; border-radius: 12px; background: #f6f3fd; overflow-wrap: anywhere; }
+.court-pet-link { display: inline-block; margin-top: 5px; color: #46358f; font-weight: 750; text-decoration: underline; }
+.court-pet-topics { display: flex; flex-wrap: wrap; gap: 6px; }
+.court-pet-topics button {
+  min-height: 32px;
+  border: 1px solid #d4c9ed;
+  border-radius: 999px;
+  padding: 3px 9px;
+  color: #403365;
+  font-weight: 620;
+}
+.court-pet-topics button:hover, .court-pet-topics button[aria-pressed="true"] { background: #eee8ff; }
+.court-pet-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.court-pet-form input { min-width: 0; border: 1px solid #8a819c; border-radius: 10px; padding: 7px 9px; }
+.court-pet-form button { border-radius: 10px; padding: 6px 12px; background: #544299; color: #fff; font-weight: 700; }
+.court-pet-form button:not(:disabled):hover { background: #413279; }
+
+@media (max-width: 640px) {
+  .court-pet { inset-inline-end: 12px; inset-block-end: max(12px, env(safe-area-inset-bottom)); }
+  .court-pet-panel { width: min(338px, calc(100vw - 24px)); }
+  .app-shell .main-content { padding-block-end: 76px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .court-pet-owl, .court-pet-eye { animation: none; }
+}
