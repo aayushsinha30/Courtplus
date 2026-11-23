@@ -8,7 +8,7 @@ const hash = z.string().regex(/^[0-9a-f]{64}$/);
 const signature = z.string().regex(/^[A-Za-z0-9_-]{86}$/);
 const timestamp = z.iso.datetime();
 const exhibit = z.strictObject({ id: z.uuidv4(), name: z.string(), bytes: z.number().int().positive(), sha256: hash });
-const manifest = z.strictObject({ receivedAt: timestamp, metadataSha256: hash, files: z.array(exhibit) });
+const manifest = z.strictObject({ receivedAt: timestamp, metadataSha256: hash, files: z.array(exhibit), statementSha256: hash.optional() });
 const eventFields = {
   kind: z.literal('courtplus-evidence-custody-v1'),
   seq: z.number().int().positive(), previous: hash, keyId: hash,
@@ -16,7 +16,7 @@ const eventFields = {
 };
 const event = z.discriminatedUnion('action', [
   z.strictObject({ ...eventFields, action: z.enum(['receive', 'legacy']), manifest }),
-  z.strictObject({ ...eventFields, action: z.enum(['open', 'manifest', 'section63', 'custody']) }),
+  z.strictObject({ ...eventFields, action: z.enum(['open', 'manifest', 'section63', 'custody', 'statement']) }),
   z.strictObject({ ...eventFields, action: z.literal('download'), fileId: z.uuidv4() }),
 ]);
 const eventEnvelope = z.strictObject({ payload: event, signature });
@@ -31,6 +31,7 @@ const checkpointEnvelope = z.strictObject({
 export type EvidenceMetadata = {
   id: string; receivedAt: string; submittedBy: string; caseReference: string; statement: string;
   channel: 'identified' | 'anonymous';
+  category?: 'report' | 'petition' | null;
 };
 type FileContent = { id: string; name: string; content: Buffer };
 type Event = z.infer<typeof event>;
@@ -40,7 +41,7 @@ type AccessEvent = Exclude<Event, Seal>;
 type JournalRow = { seq: number; submissionId: string; action: string; envelope: string; head: string };
 
 const metadataQuery = 'SELECT id, received_at AS receivedAt, submitted_by AS submittedBy,'
-  + ' case_reference AS caseReference, statement, channel FROM evidence_submissions';
+  + ' case_reference AS caseReference, statement, channel, category FROM evidence_submissions';
 const journalQuery = 'SELECT seq, submission_id AS submissionId, action, envelope, head FROM evidence_custody';
 
 export class VaultIntegrityError extends Error {}
@@ -80,11 +81,17 @@ function loadPrivateKey(db: Db, path: string) {
   }
 }
 
+function metadataHash({ category, ...metadata }: EvidenceMetadata) {
+  // Identified records sealed before anonymous reporting had no category field.
+  return sha256(canonical(category ? { ...metadata, category } : metadata));
+}
+
 function snapshot(metadata: EvidenceMetadata, files: FileContent[]): z.infer<typeof manifest> {
   return {
     receivedAt: metadata.receivedAt,
-    metadataSha256: sha256(canonical(metadata)),
+    metadataSha256: metadataHash(metadata),
     files: files.map(file => ({ id: file.id, name: file.name, bytes: file.content.length, sha256: sha256(file.content) })),
+    ...(metadata.channel === 'anonymous' && metadata.statement && { statementSha256: sha256(metadata.statement) }),
   };
 }
 
@@ -92,7 +99,11 @@ export function verifyExhibit(contents: Uint8Array, fileId: string, signedManife
   const envelope = eventEnvelope.parse(signedManifest);
   assertSignature(envelope, createPublicKey(trustedPublicKey));
   if (!('manifest' in envelope.payload)) throw new VaultIntegrityError('Expected a signed evidence manifest');
-  const expected = envelope.payload.manifest.files.find(file => file.id === fileId);
+  const { statementSha256, files } = envelope.payload.manifest;
+  if (fileId === 'statement' && statementSha256 && statementSha256 === sha256(contents)) {
+    return { id: fileId, name: 'statement.txt', bytes: contents.length, sha256: statementSha256 };
+  }
+  const expected = files.find(file => file.id === fileId);
   if (!expected || expected.bytes !== contents.length || expected.sha256 !== sha256(contents)) {
     throw new VaultIntegrityError('Evidence file content does not match its signed SHA-256 digest');
   }
@@ -116,7 +127,9 @@ export function openVault(db: Db, keyPath: string, now: () => number = Date.now)
   const listMetadata = db.prepare<[], EvidenceMetadata>(metadataQuery + ' ORDER BY seq');
 
   function decode(row: JournalRow): Envelope {
-    const envelope = eventEnvelope.parse(JSON.parse(row.envelope));
+    const parsed = eventEnvelope.safeParse(JSON.parse(row.envelope));
+    if (!parsed.success) throw new VaultIntegrityError('Evidence custody contains an invalid signed event');
+    const envelope = parsed.data;
     const { seq, submissionId, action } = envelope.payload;
     assertSignature(envelope, publicKey);
     if (seq !== row.seq || submissionId !== row.submissionId || action !== row.action || sha256(canonical(envelope)) !== row.head) {
@@ -144,7 +157,8 @@ export function openVault(db: Db, keyPath: string, now: () => number = Date.now)
   }
 
   function seal(metadata: EvidenceMetadata, files: FileContent[], action: Seal['action'] = 'receive') {
-    return record(metadata.id, action === 'legacy' ? 'migration' : 'citizen', { action, manifest: snapshot(metadata, files) });
+    const actor = action === 'legacy' ? 'migration' : metadata.channel === 'anonymous' ? 'anonymous' : 'citizen';
+    return record(metadata.id, actor, { action, manifest: snapshot(metadata, files) });
   }
 
   function getSeal(metadata: EvidenceMetadata) {
@@ -152,7 +166,7 @@ export function openVault(db: Db, keyPath: string, now: () => number = Date.now)
     if (!row) throw new VaultIntegrityError('Evidence submission has no custody seal');
     const envelope = decode(row);
     if (!('manifest' in envelope.payload) || envelope.payload.manifest.receivedAt !== metadata.receivedAt
-      || envelope.payload.manifest.metadataSha256 !== sha256(canonical(metadata))) {
+      || envelope.payload.manifest.metadataSha256 !== metadataHash(metadata)) {
       throw new VaultIntegrityError('Evidence submission metadata does not match its signed manifest');
     }
     return { ...envelope, payload: envelope.payload };

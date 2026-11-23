@@ -5,9 +5,11 @@
 
 {$COURTPLUS_SITE:localhost} {
 	header >Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	@anonymousEvidence path /report-anonymously /api/evidence/anonymous /anonymous-assets/*
+	log_skip @anonymousEvidence
 	@evidenceUpload {
 		method POST
-		path /api/evidence/submissions
+		path /api/evidence/submissions /api/evidence/anonymous
 	}
 	request_body @evidenceUpload {
 		max_size 41MiB

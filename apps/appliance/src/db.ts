@@ -65,18 +65,33 @@ export function openDb(path: string, secretPath: string): Db {
     db.pragma('recursive_triggers=ON');
     db.transaction(() => {
       const version = db.pragma('user_version', { simple: true });
-      if (version === 3) return;
-      if (version !== 0 && version !== 1 && version !== 2) throw new Error('Unsupported CourtPlus Cloud database version');
-      if (version === 0) for (const sql of schema) db.exec(sql);
-      if (version !== 2) for (const sql of evidenceSchema) db.exec(sql);
-      for (const sql of vaultSchema) db.exec(sql);
-      for (const table of immutableEvidenceTables) {
-        for (const operation of ['UPDATE', 'DELETE']) {
-          db.exec("CREATE TRIGGER " + table + '_no_' + operation + ' BEFORE ' + operation + ' ON ' + table
-            + " BEGIN SELECT RAISE(ABORT, 'evidence vault is append-only'); END");
-        }
+      switch (version) {
+        case 0:
+          for (const sql of schema) db.exec(sql);
+          // Falls through to apply all subsequent migrations.
+        case 1:
+          for (const sql of evidenceSchema) db.exec(sql);
+          // Falls through.
+        case 2:
+          for (const sql of vaultSchema) db.exec(sql);
+          for (const table of immutableEvidenceTables) {
+            for (const operation of ['UPDATE', 'DELETE']) {
+              db.exec("CREATE TRIGGER " + table + '_no_' + operation + ' BEFORE ' + operation + ' ON ' + table
+                + " BEGIN SELECT RAISE(ABORT, 'evidence vault is append-only'); END");
+            }
+          }
+          // Falls through.
+        case 3:
+          db.exec("ALTER TABLE evidence_submissions ADD COLUMN category TEXT CHECK ("
+            + "(channel = 'identified' AND category IS NULL) OR "
+            + "(channel = 'anonymous' AND category IS NOT NULL AND category IN ('report', 'petition') AND submitted_by = ''))");
+          db.pragma('user_version=4');
+          break;
+        case 4:
+          break;
+        default:
+          throw new Error('Unsupported CourtPlus Cloud database version');
       }
-      db.pragma('user_version=3');
     }).immediate();
     return db;
   } catch (error) {

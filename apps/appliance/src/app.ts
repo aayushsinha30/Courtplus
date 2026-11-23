@@ -84,12 +84,12 @@ export async function buildApp(options: Options) {
   await app.register(cors, { origin, credentials: true, methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'] });
   await app.register(rateLimit, { max: 180, timeWindow: '1 minute' });
   app.addHook('onRequest', async (_, reply) => { reply.header('cache-control', 'no-store'); });
-  app.setErrorHandler((error, _, reply) => {
+  app.setErrorHandler((error, request, reply) => {
     if (error instanceof HttpError) return reply.code(error.statusCode).send({ error: error.code });
     if (error instanceof VaultIntegrityError) return reply.code(409).send({ error: 'EVIDENCE_INTEGRITY_FAILED' });
     const status = error instanceof Error && 'statusCode' in error ? Number(error.statusCode) : 500;
     if (status >= 400 && status < 500) return reply.code(status).send({ error: 'REQUEST_REJECTED' });
-    app.log.error({ err: error }, 'CourtPlus Cloud request failed');
+    request.log.error({ err: error }, 'CourtPlus Cloud request failed');
     return reply.code(500).send({ error: 'INTERNAL_ERROR' });
   });
 
@@ -186,13 +186,16 @@ export async function buildApp(options: Options) {
   });
   for (const [name, type] of [['cloud.js', 'text/javascript'], ['cloud.css', 'text/css']]) {
     app.get('/' + name, async (_, reply) => reply.type(type).send(readFileSync(join(web, name))));
+    if (options.evidenceEnabled) {
+      app.get('/anonymous-assets/' + name, { logLevel: 'silent' }, async (_, reply) => reply.type(type).send(readFileSync(join(web, name))));
+    }
   }
   app.get('/login', async (_, reply) => page(reply, 'Sign in', [
     '<form id="sign-in">',
     '<label>Account<input name="username" autocomplete="username" required></label>',
     '<label>Password<input name="password" type="password" autocomplete="current-password" required></label>',
     '<button type="submit">Sign in</button><p role="status"></p></form>',
-    options.evidenceEnabled ? '<p><a href="/submit-evidence">Send evidence to the court</a></p>' : '',
+    options.evidenceEnabled ? '<p><a href="/submit-evidence">Send evidence to the court</a> · <a href="/report-anonymously">Report anonymously</a></p>' : '',
   ].join(''), 'login'));
 
   app.get('/handoffs', async (request, reply) => {

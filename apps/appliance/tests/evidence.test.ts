@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Writable } from 'node:stream';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { addAccount } from '../src/auth.js';
@@ -12,6 +13,7 @@ const origin = 'https://courtplus.example.test';
 const password = 'fictional evidence inbox password';
 const path = '/api/evidence/submissions';
 const inbox = '/judge/evidence';
+const anonymousPath = '/api/evidence/anonymous';
 const photo = Uint8Array.of(0xff, 0xd8, 0xff, 0x01, 0x00, 0xff, 0xd9);
 const receivedAt = '2026-11-23T12:00:00.000Z';
 type App = Awaited<ReturnType<typeof buildApp>>;
@@ -34,7 +36,14 @@ describe.sequential('Citizen evidence intake', () => {
   let admin: { cookie: string };
   let detail: string;
   let download: string;
-  const start = () => buildApp({ db, origin, now: () => Date.parse(receivedAt), evidenceEnabled: true });
+  const logs: string[] = [];
+  const stream = new Writable({
+    write(chunk, _, callback) {
+      logs.push(chunk.toString());
+      callback();
+    },
+  });
+  const start = () => buildApp({ db, origin, now: () => Date.parse(receivedAt), evidenceEnabled: true, logger: { level: 'trace', stream } });
 
   async function login(username: string, remoteAddress: string) {
     const reply = await app.inject({ method: 'POST', url: '/api/auth/login', remoteAddress, payload: { username, password } });
@@ -42,11 +51,11 @@ describe.sequential('Citizen evidence intake', () => {
     return { cookie: String(reply.headers['set-cookie']).split(';')[0] };
   }
 
-  async function upload(form: FormData, requestOrigin = origin) {
-    const encoded = new Request(origin + path, { method: 'POST', body: form });
+  async function upload(form: FormData, requestOrigin = origin, url = path, headers: Record<string, string> = {}) {
+    const encoded = new Request(origin + url, { method: 'POST', body: form });
     return app.inject({
-      method: 'POST', url: path, headers: {
-        origin: requestOrigin, 'content-type': encoded.headers.get('content-type')!,
+      method: 'POST', url, remoteAddress: url === anonymousPath ? '203.0.113.74' : undefined, headers: {
+        origin: requestOrigin, 'content-type': encoded.headers.get('content-type')!, ...headers,
       },
       payload: Buffer.from(await encoded.arrayBuffer()),
     });
@@ -161,6 +170,60 @@ describe.sequential('Citizen evidence intake', () => {
     expect((await app.inject({ url: download, headers: judge })).rawPayload).toEqual(Buffer.from(photo));
   });
 
+  test('accepts a text-only anonymous petition without identity fields, credentials, or a request log', async () => {
+    logs.length = 0;
+    const remoteAddress = '203.0.113.74';
+    const formPage = await app.inject({ url: '/report-anonymously', remoteAddress });
+    expect(formPage.body).not.toContain('name="submittedBy"');
+    expect(formPage.body).toContain('/anonymous-assets/cloud.js');
+    expect((await app.inject({ url: '/anonymous-assets/cloud.js', remoteAddress })).statusCode).toBe(200);
+    expect((await app.inject({ url: '/anonymous-assets/cloud.css', remoteAddress })).statusCode).toBe(200);
+    const form = new FormData();
+    form.set('category', 'petition');
+    expect((await upload(form, origin, anonymousPath)).json()).toEqual({ error: 'ANONYMOUS_EMPTY' });
+    const statement = 'Fictional petition for judicial review.';
+    form.set('statement', statement);
+    expect((await upload(form, origin, anonymousPath, judge)).json()).toEqual({ error: 'ANONYMOUS_CREDENTIALS' });
+    form.set('submittedBy', 'Must never be persisted');
+    expect((await upload(form, origin, anonymousPath)).statusCode).toBe(400);
+    form.delete('submittedBy');
+    const reply = await upload(form, origin, anonymousPath);
+    expect(reply.statusCode, reply.body).toBe(201);
+    expect(logs.join('')).not.toContain(remoteAddress);
+    expect(logs.join('')).not.toContain(anonymousPath);
+    const { reference, receipt } = reply.json();
+    expect(reply.json()).toMatchObject({ fileCount: 0, receipt: { payload: {
+      actor: 'anonymous', manifest: { files: [], statementSha256: createHash('sha256').update(statement).digest('hex') },
+    } } });
+    expect(db.prepare('SELECT submitted_by, case_reference FROM evidence_submissions WHERE id = ?').get(reference))
+      .toEqual({ submitted_by: '', case_reference: '' });
+    const page = await app.inject({ url: inbox + '/' + reference, headers: judge });
+    expect(page.body).toContain('Anonymous petition');
+    expect(page.body).toContain(statement);
+    const statementUrl = inbox + '/' + reference + '/statement';
+    expect((await app.inject({ url: statementUrl, headers: admin })).statusCode).toBe(403);
+    const retrieved = await app.inject({ url: statementUrl, headers: judge });
+    expect(retrieved.body).toBe(statement);
+    const vault = openVault(db, dbPath + '.evidence-key.pem');
+    expect(verifyExhibit(retrieved.rawPayload, 'statement', receipt, vault.pem).name).toBe('statement.txt');
+  });
+
+  test('replaces anonymous exhibit names and preserves bytes for verification', async () => {
+    const form = new FormData();
+    form.set('category', 'report');
+    form.append('evidence', new Blob([photo]), 'Private-name.jpg');
+    const reply = await upload(form, origin, anonymousPath);
+    expect(reply.statusCode, reply.body).toBe(201);
+    const { reference, receipt } = reply.json();
+    const [file] = receipt.payload.manifest.files;
+    expect(file.name).toBe('exhibit-1.jpg');
+    const view = await app.inject({ url: inbox + '/' + reference, headers: judge });
+    expect(view.body).toContain('Anonymous report');
+    expect(view.body).not.toContain('Private-name');
+    const retrieved = await app.inject({ url: inbox + '/' + reference + '/files/' + file.id, headers: judge });
+    expect(retrieved.rawPayload).toEqual(Buffer.from(photo));
+  });
+
   test('rejects storage tampering and detects rollback against a saved checkpoint', async () => {
     const keyPath = dbPath + '.evidence-key.pem';
     const vault = openVault(db, keyPath);
@@ -176,5 +239,33 @@ describe.sequential('Citizen evidence intake', () => {
     expect((await app.inject({ url: download, headers: judge })).statusCode).toBe(409);
     expect(() => vault.verifyVault()).toThrow(/contents/);
     expect(() => openVault(db, keyPath + '.missing')).toThrow(/original evidence signing key/);
+  });
+
+  test('seals existing uploads without claiming to have signed their original timestamp', () => {
+    const legacyPath = join(directory, 'legacy.sqlite3');
+    const id = randomUUID();
+    const original = openDb(legacyPath, secret);
+    try {
+      original.exec('DROP TABLE evidence_custody; DROP TABLE evidence_legacy; DROP TRIGGER evidence_files_only_before_seal;'
+        + ' DROP TRIGGER evidence_submissions_no_UPDATE; DROP TRIGGER evidence_submissions_no_DELETE;'
+        + ' DROP TRIGGER evidence_files_no_UPDATE; DROP TRIGGER evidence_files_no_DELETE;'
+        + ' ALTER TABLE evidence_submissions DROP COLUMN category; ALTER TABLE evidence_submissions DROP COLUMN channel; PRAGMA user_version=2');
+      original.prepare('INSERT INTO evidence_submissions (id, received_at, submitted_by, case_reference, statement) VALUES (?, ?, ?, ?, ?)')
+        .run(id, receivedAt, 'Legacy test citizen', '', '');
+      original.prepare('INSERT INTO evidence_files VALUES (?, ?, ?, ?, ?)').run(randomUUID(), id, 'legacy.jpg', photo.length, photo);
+    } finally {
+      original.close();
+    }
+    const upgraded = openDb(legacyPath, secret);
+    try {
+      const upgradedAt = '2026-11-24T09:30:00.000Z';
+      const vault = openVault(upgraded, legacyPath + '.pem', () => Date.parse(upgradedAt));
+      expect(vault.verifyVault()).toMatchObject({ entries: 1, submissions: 1 });
+      expect(vault.evidenceHistory(id)[0].payload).toMatchObject({
+        action: 'legacy', at: upgradedAt, manifest: { receivedAt },
+      });
+    } finally {
+      upgraded.close();
+    }
   });
 });

@@ -48,9 +48,15 @@ Run these commands from the appliance runtime directory. Distribute the public k
     node apps/appliance/dist/main.js evidence-public-key
     node apps/appliance/dist/main.js evidence-checkpoint
     node apps/appliance/dist/main.js verify-evidence [previously-retained-checkpoint.json]
-    node apps/appliance/dist/verify-exhibit.js FILE FILE_ID MANIFEST_JSON TRUSTED_PUBLIC_KEY_PEM
+    node apps/appliance/dist/verify-exhibit.js FILE FILE_ID_OR_statement MANIFEST_JSON TRUSTED_PUBLIC_KEY_PEM
 
-An optional **COURTPLUS_EVIDENCE_CHECKPOINT_FILE** makes the server check the entire vault against a retained checkpoint before enabling the evidence inbox. The Section 63 report supplies SHA-256 values to accompany the applicable Schedule certificate. Its Part A and Part B worksheets leave source and device details, attestations and signatures for the responsible person and expert. The CourtPlus server seal authenticates the recorded digest and custody event. See the [official Schedule](https://www.ncrb.mha.gov.in/uploads/SankalanPortal/ScheduleBSA.html).
+An optional **COURTPLUS_EVIDENCE_CHECKPOINT_FILE** makes the server check the entire vault against a retained checkpoint before enabling the evidence inbox. Compose accepts both evidence file settings as paths inside the container. Mount any checkpoint kept outside the database volume as read-only. The Section 63 report supplies SHA-256 values to accompany the applicable Schedule certificate. Its Part A and Part B worksheets leave source and device details, attestations and signatures for the responsible person and expert. The CourtPlus server seal authenticates the recorded digest and custody event. See the [official Schedule](https://www.ncrb.mha.gov.in/uploads/SankalanPortal/ScheduleBSA.html).
+
+### Anonymous reports and petitions
+
+With the evidence vault enabled, citizens can visit **/report-anonymously** and send a report or petition using a statement, attachments, or both. The multipart API at **POST /api/evidence/anonymous** accepts **category** (report or petition), optional **statement**, and optional **evidence** files. It rejects authentication headers, cookies and identity fields. Browser uploads replace filenames before sending, and the server also assigns generic exhibit names. Judges see the category, statement and files. The signed receipt includes the statement and exhibit hashes when present. Use **statement** as the file ID to verify a downloaded statement with the exhibit verifier.
+
+CourtPlus keeps no account or persistent network identifier in the anonymous record. Its public anonymous pages, assets and endpoint suppress application access logging, and the bundled reverse proxy skips access logs for these routes. The appliance uses source addresses transiently to limit upload abuse. Other gateways and networks may observe traffic. Original file bytes are preserved, so embedded metadata, faces, voices, and what the sender writes can still identify them. This is an account-free intake channel with signed integrity receipts. Each appliance holds up to 10,000 submissions and 1 GiB of attachments across both channels.
 
 ## HTTP and client integration
 

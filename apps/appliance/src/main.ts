@@ -9,7 +9,7 @@ import { openVault } from './vault.js';
 
 const path = process.env.COURTPLUS_DB_PATH ?? '/var/lib/courtplus/courtplus.sqlite3';
 const key = process.env.COURTPLUS_DB_KEY_FILE ?? '/run/secrets/db_key';
-const evidenceKeyFile = process.env.COURTPLUS_EVIDENCE_KEY_FILE ?? (path + '.evidence-key.pem');
+const evidenceKeyFile = process.env.COURTPLUS_EVIDENCE_KEY_FILE || (path + '.evidence-key.pem');
 const db = openDb(path, key);
 const [command, ...args] = process.argv.slice(2);
 

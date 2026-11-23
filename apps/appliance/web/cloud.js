@@ -28,6 +28,8 @@
         EVIDENCE_BUSY: 'The court is receiving other uploads. Try again shortly.',
         EVIDENCE_STORAGE_FULL: 'The court inbox cannot accept more files right now.',
         EVIDENCE_INTEGRITY_FAILED: 'The stored evidence did not pass integrity verification.',
+        ANONYMOUS_EMPTY: 'Enter a statement or choose at least one file.',
+        ANONYMOUS_CREDENTIALS: 'Open the anonymous form in your browser with JavaScript enabled.',
       }[payload.error];
       const fallback = response.status === 413 ? 'The upload exceeds the file or submission limits.'
         : response.status === 429 ? 'Try again in a minute.' : 'Request failed (' + response.status + ').';
@@ -129,6 +131,8 @@
     const status = form.querySelector('[role=status]');
     const button = form.querySelector('button[type=submit]');
     const receiptLink = document.querySelector('#evidence-receipt');
+    const anonymous = form.hasAttribute('data-anonymous');
+    button.disabled = false;
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const files = Array.from(form.elements.evidence.files);
@@ -138,17 +142,33 @@
         status.textContent = 'Choose up to 5 files, 25 MiB per file and 40 MiB in total.';
         return;
       }
+      const body = new FormData(form);
+      if (anonymous) {
+        if (!files.length && !form.elements.statement.value.trim()) {
+          status.textContent = 'Enter a statement or choose at least one file.';
+          return;
+        }
+        const accepted = new Set(form.elements.evidence.accept.split(','));
+        const extensions = files.map(file => file.name.match(/\.[a-z0-9]+$/i)?.[0].toLowerCase());
+        if (extensions.some(extension => !accepted.has(extension))) {
+          status.textContent = 'Choose a supported photo, video, audio or document file.';
+          return;
+        }
+        body.delete('evidence');
+        files.forEach((file, index) => body.append('evidence', file, 'exhibit-' + (index + 1) + extensions[index]));
+      }
       button.disabled = true;
       status.textContent = 'Uploading…';
       try {
         const { reference, fileCount, receipt } = await request(form.action, {
-          method: 'POST', credentials: 'omit', body: new FormData(form),
+          method: 'POST', credentials: 'omit', body,
         });
         form.reset();
         if (!receiptLink.hidden) URL.revokeObjectURL(receiptLink.href);
         receiptLink.href = URL.createObjectURL(new Blob([JSON.stringify(receipt, null, 2)], { type: 'application/json' }));
         receiptLink.hidden = false;
-        status.textContent = 'Received ' + fileCount + (fileCount === 1 ? ' file. ' : ' files. ')
+        const confirmation = fileCount ? 'Received ' + fileCount + (fileCount === 1 ? ' file. ' : ' files. ') : 'Statement received. ';
+        status.textContent = confirmation
           + 'Save your submission reference ' + reference + '.';
       } catch (error) {
         status.textContent = error.message;

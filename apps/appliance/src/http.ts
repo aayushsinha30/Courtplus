@@ -28,12 +28,13 @@ export function html(value: string): string {
   return value.replace(/[&<>"']/g, character => entities[character]);
 }
 
-export function page(reply: FastifyReply, title: string, content: string, script?: string) {
+export function page(reply: FastifyReply, title: string, content: string, script?: string, assetPrefix = '') {
   return reply.type('text/html; charset=utf-8').send(
     '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
-    '<title>' + html(title) + ' | CourtPlus Cloud</title><link rel="stylesheet" href="/cloud.css">' +
+    '<title>' + html(title) + ' | CourtPlus Cloud</title><link rel="stylesheet" href="' + assetPrefix + '/cloud.css">' +
+    (assetPrefix ? '<link rel="icon" href="data:,">' : '') +
     '</head><body><main><h1>' + html(title) + '</h1>' + content + '</main>' +
-    (script ? '<script src="/cloud.js" defer data-page="' + script + '"></script>' : '') + '</body></html>',
+    (script ? '<script src="' + assetPrefix + '/cloud.js" defer data-page="' + script + '"></script>' : '') + '</body></html>',
   );
 }
