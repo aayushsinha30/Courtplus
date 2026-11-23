@@ -2,7 +2,7 @@ import { createElement, useEffect, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import type { CaseRecord, CourtPlusApi, Status } from '@courtplus/contracts';
-import { DRAFT_LANGS, RIGHTS_CARD_LANGS, isReviewedLanguage } from '../lib/i18n';
+import { DRAFT_LANGS, RIGHTS_CARD_LANGS, isReviewedLanguage, ui } from '../lib/i18n';
 import { todayIST, useApp } from '../lib/context';
 import { Empty, ErrorNote, Page, btnPrimary, errMsg } from '../components/ui';
 
@@ -103,63 +103,58 @@ export function Drafts() {
   };
 
   return (
-    <Page title="Drafting studio" note={view === 'legal_aid' ? 'Prepare and check. The jail superintendent attests and files the s.479(3) application; a lawyer reviews flagged cases. The court decides.' : 'Drafts are prepared by legal-aid staff.'}>
+    <Page title={ui("Drafting studio")} note={view === 'legal_aid' ? ui("Prepare and check. The jail superintendent attests and files the s.479(3) application; a lawyer reviews flagged cases. The court decides.") : ui("Drafts are prepared by legal-aid staff.")}>
       <ErrorNote error={error} />
       <div className="draft-studio">
-      <section className="panel grid content-start gap-4" aria-label="Draft parameters">
-        <h2 className="text-lg font-semibold">Draft parameters</h2>
-        {cases?.length === 0 && <Empty title="No cases to draft for" hint="Import a court order to begin." to="/import" cta="Import order" />}
-        <label>Case
-          <select className="field-control" value={caseId} disabled={!cases?.length} onChange={(e) => { setSelection({ requestedCaseId, caseId: e.target.value }); setLang(undefined); }}>
+      <section className="panel grid content-start gap-4" aria-label={ui("Draft parameters")}>
+        <h2 className="text-lg font-semibold">{ui("Draft parameters")}</h2>
+        {cases?.length === 0 && <Empty title={ui("No cases to draft for")} hint={ui("Import a court order to begin.")} to="/import" cta={ui("Import order")} />}
+        <label>{ui("Case")}<select className="field-control" value={caseId} disabled={!cases?.length} onChange={(e) => { setSelection({ requestedCaseId, caseId: e.target.value }); setLang(undefined); }}>
             {cases?.map((c) => <option key={c.id} value={c.id}>{c.caseNo ?? c.cnr ?? c.id}</option>)}
           </select>
         </label>
-        <label>Draft type
-          <select className="field-control" value={kind} onChange={(e) => { setSelection({ requestedCaseId, caseId, kind: e.target.value as Kind }); setLang(undefined); }}>
+        <label>{ui("Draft type")}<select className="field-control" value={kind} onChange={(e) => { setSelection({ requestedCaseId, caseId, kind: e.target.value as Kind }); setLang(undefined); }}>
             {kinds.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
         </label>
         {status?.caseId === caseId && !canApply && (
           <p className="text-sm text-slate-700" data-testid="s479-hidden">
             No s.479(3) application: the engine result as of {status.asOf} is {status.status.replace(/_/g, ' ')}, not Apply now.
-            {status.status === 'NEEDS_LAWYER_REVIEW' || status.status === 'OUTSIDE_SCREEN' ? ' Send this case for lawyer review.' : ''}
+            {status.status === 'NEEDS_LAWYER_REVIEW' || status.status === 'OUTSIDE_SCREEN' ? ui(" Send this case for lawyer review.") : ''}
           </p>
         )}
-        <label>Language
-          <select className="field-control" value={exportLang} onChange={(e) => setLang(e.target.value)}>
+        <label>{ui("Language")}<select className="field-control" value={exportLang} onChange={(e) => setLang(e.target.value)}>
             {langs.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
           </select>
         </label>
         {kind === 'RIGHTS_CARD' && !isReviewedLanguage(exportLang) && (
-          <p className="text-sm text-amber-800">
-            ▲ Machine translation, not legally reviewed. The English text is authoritative.
-          </p>
+          <p className="text-sm text-amber-800">{ui("▲ Machine translation, not legally reviewed. The English text is authoritative.")}</p>
         )}
         <button className={btnPrimary} disabled={!caseId || busy} onClick={() => void run()}>
-          {busy ? 'Preparing…' : 'Export signed PDF'}
+          {busy ? ui("Preparing…") : ui("Export signed PDF")}
         </button>
       </section>
-      <section className="panel" aria-label="Draft preview">
-        <div className="panel-heading"><h2>Live preview</h2><span className="count-chip">Draft</span></div>
+      <section className="panel" aria-label={ui("Draft preview")}>
+        <div className="panel-heading"><h2>{ui("Live preview")}</h2><span className="count-chip">{ui("Draft")}</span></div>
         <div className="draft-paper">
           {currentPreview?.html ? <div lang={exportLang} dir={exportLang === 'ur' ? 'rtl' : 'ltr'}>{renderPreview(currentPreview.html)}</div> : <>
             <h3>{KINDS.find(([k]) => k === kind)?.[1]}</h3>
             {currentPreview?.error && <ErrorNote error={currentPreview.error} />}
-            {caseId && previewDraft && !currentPreview && <p role="status">Preparing preview…</p>}
-            <dl><div><dt>Case</dt><dd>{record?.caseNo ?? record?.cnr ?? record?.id ?? 'Select a case'}</dd></div>
-              <div><dt>Language</dt><dd>{langs.find(([code]) => code === exportLang)?.[1]}</dd></div>
-              {profile?.office && <div><dt>Office default</dt><dd>{profile.office}</dd></div>}
-              <div><dt>Screening status</dt><dd>{!caseId ? 'Select a case' : status?.caseId === caseId ? status.status.replace(/_/g, ' ') : 'Checking…'}</dd></div></dl>
+            {caseId && previewDraft && !currentPreview && <p role="status">{ui("Preparing preview…")}</p>}
+            <dl><div><dt>{ui("Case")}</dt><dd>{record?.caseNo ?? record?.cnr ?? record?.id ?? ui("Select a case")}</dd></div>
+              <div><dt>{ui("Language")}</dt><dd>{langs.find(([code]) => code === exportLang)?.[1]}</dd></div>
+              {profile?.office && <div><dt>{ui("Office default")}</dt><dd>{profile.office}</dd></div>}
+              <div><dt>{ui("Screening status")}</dt><dd>{!caseId ? ui("Select a case") : status?.caseId === caseId ? status.status.replace(/_/g, ' ') : 'Checking…'}</dd></div></dl>
           </>}
-          <p className="draft-disclosure">The signed PDF is generated from confirmed case facts. Check the exported document before filing or sharing.</p>
+          <p className="draft-disclosure">{ui("The signed PDF is generated from confirmed case facts. Check the exported document before filing or sharing.")}</p>
         </div>
       {out && (
-        <section className="mt-6 rounded border p-3" aria-label="Export result">
-          <h2 className="font-semibold">Signed PDF ready</h2>
-          <p className="text-sm">Receipt ID: <code data-testid="receipt-id">{baseName(out.receiptPath)}</code></p>
+        <section className="mt-6 rounded border p-3" aria-label={ui("Export result")}>
+          <h2 className="font-semibold">{ui("Signed PDF ready")}</h2>
+          <p className="text-sm">{ui("Receipt ID:") + " "}<code data-testid="receipt-id">{baseName(out.receiptPath)}</code></p>
           {qr && <img src={qr} alt="QR code for the receipt ID" width={160} height={160} />}
           {/* No file:// preview: the desktop CSP blocks local file loads by design. */}
-          <p className="break-all text-sm">Saved to <span className="text-slate-600">{out.pdfPath}</span></p>
+          <p className="break-all text-sm">{ui("Saved to") + " "}<span className="text-slate-600">{out.pdfPath}</span></p>
         </section>
       )}
       </section>

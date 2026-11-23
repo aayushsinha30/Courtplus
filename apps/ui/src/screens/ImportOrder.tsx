@@ -1,3 +1,4 @@
+import { ui } from '../lib/i18n';
 import { useMemo, useRef, useState } from 'react';
 import type { CourtPlusApi, Entity, FieldSuggestion } from '@courtplus/contracts';
 import { useApp } from '../lib/context';
@@ -85,7 +86,7 @@ export function ImportOrder() {
   };
 
   return (
-    <Page title="Import order" note="Text is read on this computer. Suggestions need a person to confirm.">
+    <Page title={ui("Import order")} note={ui("Text is read on this computer. Suggestions need a person to confirm.")}>
       <ErrorNote error={error} />
       {!doc && (
         <div
@@ -93,10 +94,10 @@ export function ImportOrder() {
           onDrop={(e) => { e.preventDefault(); void handleFile(e.dataTransfer.files[0]); }}
           className="rounded-lg border-2 border-dashed border-slate-400 bg-white p-10 text-center"
         >
-          <p className="text-lg font-semibold">Import a court order to begin</p>
-          <p className="mb-4 text-slate-600">Drag a PDF or a photo of the order here, or choose a file.</p>
+          <p className="text-lg font-semibold">{ui("Import a court order to begin")}</p>
+          <p className="mb-4 text-slate-600">{ui("Drag a PDF or a photo of the order here, or choose a file.")}</p>
           <label className={`${btnPrimary} cursor-pointer`}>
-            {busy ? 'Reading…' : 'Choose PDF or image'}
+            {busy ? ui("Reading…") : ui("Choose PDF or image")}
             <input
               type="file" accept="application/pdf,image/*" className="sr-only"
               onChange={(e) => void handleFile(e.target.files?.[0])}
@@ -110,16 +111,14 @@ export function ImportOrder() {
           <div>
             <div className="mb-2 flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={anonymise} onChange={(e) => setAnonymise(e.target.checked)} />
-                Anonymised view (names masked)
-              </label>
-              {doc.ocr && <span className="rounded bg-slate-200 px-2 py-0.5 text-xs">Scanned: read by OCR, check carefully</span>}
-              <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium">✦ AI helped read this order</span>
-              <button className={btn} onClick={() => setDoc(null)}>Import another</button>
+                <input type="checkbox" checked={anonymise} onChange={(e) => setAnonymise(e.target.checked)} />{ui("Anonymised view (names masked)")}</label>
+              {doc.ocr && <span className="rounded bg-slate-200 px-2 py-0.5 text-xs">{ui("Scanned: read by OCR, check carefully")}</span>}
+              <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium">{ui("✦ AI helped read this order")}</span>
+              <button className={btn} onClick={() => setDoc(null)}>{ui("Import another")}</button>
             </div>
             <div
               ref={textRef} onMouseUp={captureSelection} onKeyUp={captureSelection} tabIndex={0}
-              aria-label="Order text"
+              aria-label={ui("Order text")}
               className="max-h-[60vh] overflow-auto whitespace-pre-wrap rounded border bg-white p-3 text-sm leading-6"
             >
               {segs.map((s, i) =>
@@ -131,8 +130,8 @@ export function ImportOrder() {
               )}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 rounded border bg-white p-2 text-sm">
-              <span>Missed a field? Select text above, then:</span>
-              <select aria-label="Field" value={manualField} onChange={(e) => setManualField(e.target.value)} className="rounded border px-1 py-1">
+              <span>{ui("Missed a field? Select text above, then:")}</span>
+              <select aria-label={ui("Field")} value={manualField} onChange={(e) => setManualField(e.target.value)} className="rounded border px-1 py-1">
                 {FIELDS.map((f) => <option key={f}>{f}</option>)}
               </select>
               <button
@@ -144,9 +143,9 @@ export function ImportOrder() {
             </div>
           </div>
 
-          <aside aria-label="Field suggestions" className="space-y-2">
+          <aside aria-label={ui("Field suggestions")} className="space-y-2">
             <h2 className="font-semibold">Suggestions ({doc.suggestions.length})</h2>
-            {doc.suggestions.length === 0 && <p className="text-sm text-slate-600">No suggestions found. Select text to fill fields by hand.</p>}
+            {doc.suggestions.length === 0 && <p className="text-sm text-slate-600">{ui("No suggestions found. Select text to fill fields by hand.")}</p>}
             {doc.suggestions.map((s: FieldSuggestion, i) => {
               const d = decisions[i];
               if (!d) return null;
@@ -164,18 +163,18 @@ export function ImportOrder() {
                     <p className="font-medium">{d.value}</p>
                   )}
                   <blockquote className="my-1 border-l-2 pl-2 text-xs text-slate-700">“{s.sentence}”{s.page ? ` (p. ${s.page})` : ''}</blockquote>
-                  <p className="text-xs">Status: <strong>{d.status === 'confirmed' ? '✓ Confirmed' : d.status === 'rejected' ? '✗ Rejected' : 'Pending'}</strong></p>
+                  <p className="text-xs">{ui("Status:") + " "}<strong>{d.status === 'confirmed' ? ui("✓ Confirmed") : d.status === 'rejected' ? '✗ Rejected' : 'Pending'}</strong></p>
                   <div className="mt-1 flex gap-1">
-                    <button className={btnPrimary} onClick={() => decide(i, { status: 'confirmed' })}>Confirm</button>
-                    <button className={btn} onClick={() => setEditing(i)}>Edit</button>
-                    <button className={btn} onClick={() => decide(i, { status: 'rejected' })}>Reject</button>
+                    <button className={btnPrimary} onClick={() => decide(i, { status: 'confirmed' })}>{ui("Confirm")}</button>
+                    <button className={btn} onClick={() => setEditing(i)}>{ui("Edit")}</button>
+                    <button className={btn} onClick={() => decide(i, { status: 'rejected' })}>{ui("Reject")}</button>
                   </div>
                 </div>
               );
             })}
             {Object.keys(manual).length > 0 && (
               <div className="rounded border bg-white p-2 text-sm">
-                <h3 className="font-semibold">Entered by hand</h3>
+                <h3 className="font-semibold">{ui("Entered by hand")}</h3>
                 <ul>{Object.entries(manual).map(([k, v]) => <li key={k}><strong>{k}</strong>: {v}</li>)}</ul>
               </div>
             )}

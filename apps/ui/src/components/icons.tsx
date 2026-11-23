@@ -1,7 +1,7 @@
 import {
   ArrowUpRight, Bell, BriefcaseBusiness, CalendarDays, Check, Download, FilePenLine, FileSpreadsheet,
   House, LayoutDashboard, Mic, PanelsTopLeft, PanelLeftClose, PanelLeftOpen, Plus, Scale, Search, Settings,
-  ShieldCheck, Upload, UserRound, UsersRound, ChartNoAxesColumn,
+  ShieldCheck, Upload, UserRound, UsersRound, ChartNoAxesColumn, Moon, Sun,
 } from 'lucide-react';
 
 const icons = {
@@ -9,7 +9,7 @@ const icons = {
   people: UsersRound, person: UserRound, drafts: FilePenLine, sheet: FileSpreadsheet, verify: ShieldCheck,
   stats: ChartNoAxesColumn, shield: ShieldCheck, settings: Settings, brand: Scale, expand: PanelLeftOpen,
   collapse: PanelLeftClose, plus: Plus, bell: Bell, search: Search, arrow: ArrowUpRight, check: Check,
-  download: Download, dashboard: LayoutDashboard, mic: Mic,
+  download: Download, dashboard: LayoutDashboard, mic: Mic, moon: Moon, sun: Sun,
 };
 
 export type IconName = keyof typeof icons;

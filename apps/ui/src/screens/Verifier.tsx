@@ -1,3 +1,4 @@
+import { ui } from '../lib/i18n';
 import { useState } from 'react';
 import jsQR from 'jsqr';
 import type { CourtPlusApi } from '@courtplus/contracts';
@@ -85,7 +86,7 @@ export function Verifier() {
   );
 
   return (
-    <Page title="Verifier" note="Check that a signed PDF is genuine and unchanged. Works offline.">
+    <Page title={ui("Verifier")} note={ui("Check that a signed PDF is genuine and unchanged. Works offline.")}>
       <ErrorNote error={error} />
       <div className="grid max-w-xl gap-3">
         {pick('Signed PDF', 'application/pdf', setPdf, pdf)}
@@ -94,12 +95,12 @@ export function Verifier() {
         {pick('Or a photo of the QR code (shows the receipt ID)', 'image/*', (f) => {
           if (f) void decodeQr(f).then((v) => setQrText(v ?? 'No QR code found in this image'), () => setQrText('Could not read this image'));
         }, null)}
-        {qrText && <p role="status" className="text-sm">QR says: <code>{qrText}</code></p>}
-        <button className={btnPrimary} disabled={!pdf || !receipt || !manifest} onClick={() => void run()}>Verify</button>
+        {qrText && <p role="status" className="text-sm">{ui("QR says:") + " "}<code>{qrText}</code></p>}
+        <button className={btnPrimary} disabled={!pdf || !receipt || !manifest} onClick={() => void run()}>{ui("Verify")}</button>
       </div>
       <div aria-live="polite">
         {result && summary && (
-          <section className="mt-6 space-y-3" aria-label="Verification result">
+          <section className="mt-6 space-y-3" aria-label={ui("Verification result")}>
             <p className={`rounded-lg border-2 px-4 py-3 font-semibold ${TONES[summary.tone]}`}>{summary.text}</p>
             <div className="grid gap-3 md:grid-cols-3">
               {BADGES.map((b) => {
@@ -109,7 +110,7 @@ export function Verifier() {
                 return (
                   <div key={b.key} className={`rounded-lg border-2 p-4 text-center ${TONES[tone]}`}>
                     <p className="text-sm uppercase">{b.title}</p>
-                    <p className="text-2xl font-bold">{notChecked ? '– Not checked' : b.text[value]}</p>
+                    <p className="text-2xl font-bold">{notChecked ? ui("– Not checked") : b.text[value]}</p>
                   </div>
                 );
               })}

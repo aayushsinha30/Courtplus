@@ -1,3 +1,4 @@
+import { ui } from '../lib/i18n';
 import { evidenceBridge } from '../lib/api';
 import { useEffect, useState } from 'react';
 import type { EvidenceItem, EvidenceMode, EvidenceStatus, EvidenceVerification } from '@courtplus/contracts';
@@ -156,7 +157,7 @@ export function EvidenceInbox() {
   }
 
   return (
-    <Page title="Evidence Vault & Judicial Inbox" note="Tamper-evident vault under Bharatiya Sakshya Adhiniyam, 2023. Encrypted at rest (AES-256-GCM) with Ed25519 digital signature and hash-chained audit logging.">
+    <Page title={ui("Evidence Vault & Judicial Inbox")} note={ui("Tamper-evident vault under Bharatiya Sakshya Adhiniyam, 2023. Encrypted at rest (AES-256-GCM) with Ed25519 digital signature and hash-chained audit logging.")}>
       <ErrorNote error={error} />
 
       {/* TABS & FILTERS */}
@@ -166,23 +167,17 @@ export function EvidenceInbox() {
             type="button"
             className={`rounded px-3 py-1.5 text-sm font-semibold ${activeTab === 'identified' ? 'bg-blue-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
             onClick={() => setActiveTab('identified')}
-          >
-            Case Evidence (Identified)
-          </button>
+          >{ui("Case Evidence (Identified)")}</button>
           <button
             type="button"
             className={`rounded px-3 py-1.5 text-sm font-semibold ${activeTab === 'anonymous' ? 'bg-amber-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
             onClick={() => setActiveTab('anonymous')}
-          >
-            Anonymous Tips
-          </button>
+          >{ui("Anonymous Tips")}</button>
           <button
             type="button"
             className={`rounded px-3 py-1.5 text-sm font-semibold ${activeTab === 'all' ? 'bg-blue-700 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
             onClick={() => setActiveTab('all')}
-          >
-            All Submissions
-          </button>
+          >{ui("All Submissions")}</button>
         </div>
 
         <form
@@ -191,37 +186,35 @@ export function EvidenceInbox() {
         >
           <input
             type="text"
-            placeholder="Search Case Ref (CNR)..."
+            placeholder={ui("Search Case Ref (CNR)...")}
             value={caseFilter}
             onChange={(e) => setCaseFilter(e.target.value)}
             className="rounded border border-slate-300 px-3 py-1.5 text-sm"
           />
-          <button type="submit" className={btn}>Filter</button>
+          <button type="submit" className={btn}>{ui("Filter")}</button>
           {caseFilter && (
             <button
               type="button"
               className={btn}
               onClick={() => { setCaseFilter(''); setTimeout(loadItems, 0); }}
-            >
-              Clear
-            </button>
+            >{ui("Clear")}</button>
           )}
         </form>
       </div>
 
       {/* SAFEGUARD NOTICE */}
       <div className="mb-4 rounded border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
-        <strong>Judicial Safeguard & Natural Justice:</strong> Identified evidence submissions are tied to a CNR / case record and must be marked <em>"Shared with parties"</em> before judicial reliance. Anonymous whistleblower tips are stored without personal identifiers or IP logs and are directed into this separate confidential queue for preliminary judicial assessment.
+        <strong>{ui("Judicial Safeguard & Natural Justice:")}</strong> Identified evidence submissions are tied to a CNR / case record and must be marked <em>{ui("\"Shared with parties\"")}</em> before judicial reliance. Anonymous whistleblower tips are stored without personal identifiers or IP logs and are directed into this separate confidential queue for preliminary judicial assessment.
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-500">Loading evidence submissions...</p>
+        <p className="text-sm text-slate-500">{ui("Loading evidence submissions...")}</p>
       ) : items.length === 0 ? (
         <Empty
-          title="No evidence submissions found"
-          hint={activeTab === 'anonymous' ? 'No anonymous whistleblower tips submitted for this query.' : 'No case evidence filed yet.'}
+          title={ui("No evidence submissions found")}
+          hint={activeTab === 'anonymous' ? ui("No anonymous whistleblower tips submitted for this query.") : ui("No case evidence filed yet.")}
           to="/submit-proof"
-          cta="Submit proof"
+          cta={ui("Submit proof")}
         />
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -252,9 +245,9 @@ export function EvidenceInbox() {
                   <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
                     <span>
                       {isAnon ? (
-                        <span className="font-semibold text-amber-700">Anonymous Tip</span>
+                        <span className="font-semibold text-amber-700">{ui("Anonymous Tip")}</span>
                       ) : (
-                        <span>By: <strong>{item.submitter?.name}</strong></span>
+                        <span>{ui("By:") + " "}<strong>{item.submitter?.name}</strong></span>
                       )}
                     </span>
                     <span>{new Date(item.receivedAt).toLocaleDateString()} {new Date(item.receivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -271,13 +264,13 @@ export function EvidenceInbox() {
                 <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-3">
                   <div>
                     <h2 className="text-lg font-bold text-slate-900">{selectedItem.caseRef}</h2>
-                    <p className="text-xs text-slate-500">Submitted: {new Date(selectedItem.receivedAt).toLocaleString()}</p>
+                    <p className="text-xs text-slate-500">{ui("Submitted:") + " "}{new Date(selectedItem.receivedAt).toLocaleString()}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`rounded px-2.5 py-1 text-xs font-bold uppercase ${
                       selectedItem.mode === 'anonymous' ? 'bg-amber-100 text-amber-900' : 'bg-slate-100 text-slate-800'
                     }`}>
-                      {selectedItem.mode === 'anonymous' ? 'Anonymous Whistleblower' : 'Identified Party'}
+                      {selectedItem.mode === 'anonymous' ? ui("Anonymous Whistleblower") : ui("Identified Party")}
                     </span>
                     <span className={`rounded px-2.5 py-1 text-xs font-bold uppercase ${
                       selectedItem.status === 'taken_on_record' ? 'bg-green-100 text-green-800' :
@@ -295,7 +288,7 @@ export function EvidenceInbox() {
                     <div className="flex items-center gap-2">
                       <span className="text-lg text-emerald-700">✓</span>
                       <div>
-                        <strong className="text-sm text-emerald-900">Unchanged since upload</strong>
+                        <strong className="text-sm text-emerald-900">{ui("Unchanged since upload")}</strong>
                         <p className="font-mono text-xs text-emerald-800 break-all">SHA-256: {selectedItem.sha256}</p>
                       </div>
                     </div>
@@ -305,43 +298,40 @@ export function EvidenceInbox() {
                       onClick={() => handleVerify(selectedItem.id)}
                       className="rounded border border-emerald-600 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
                     >
-                      {verifying ? 'Verifying...' : 'Re-verify Hash'}
+                      {verifying ? ui("Verifying...") : ui("Re-verify Hash")}
                     </button>
                   </div>
 
                   {verification && (
                     <div className="mt-2 border-t border-emerald-200 pt-2 text-xs text-emerald-900">
-                      <div>File Bytes Intact: {verification.hashMatch ? '✓ Verified' : '✗ Mismatch'}</div>
-                      <div>Ed25519 Signature: {verification.signatureValid ? '✓ Valid' : '✗ Invalid'}</div>
-                      <div>Evidence Hash Chain: {verification.chainValid ? '✓ Intact' : '✗ Broken'}</div>
+                      <div>{ui("File Bytes Intact:") + " "}{verification.hashMatch ? ui("✓ Verified") : ui("✗ Mismatch")}</div>
+                      <div>{ui("Ed25519 Signature:") + " "}{verification.signatureValid ? ui("✓ Valid") : ui("✗ Invalid")}</div>
+                      <div>{ui("Evidence Hash Chain:") + " "}{verification.chainValid ? ui("✓ Intact") : ui("✗ Broken")}</div>
                     </div>
                   )}
                 </div>
 
                 {/* DETAILS & SUBMITTER */}
                 <div className="mb-4 text-sm">
-                  <p className="text-slate-700"><strong>Description:</strong> {selectedItem.description}</p>
+                  <p className="text-slate-700"><strong>{ui("Description:")}</strong> {selectedItem.description}</p>
                   {selectedItem.submitter ? (
                     <p className="mt-1 text-xs text-slate-600">
-                      <strong>Submitter:</strong> {selectedItem.submitter.name} ({selectedItem.submitter.phone} {selectedItem.submitter.email ? `· ${selectedItem.submitter.email}` : ''})
+                      <strong>{ui("Submitter:")}</strong> {selectedItem.submitter.name} ({selectedItem.submitter.phone} {selectedItem.submitter.email ? `· ${selectedItem.submitter.email}` : ''})
                     </p>
                   ) : (
-                    <p className="mt-1 text-xs font-medium text-amber-700">
-                      Submitter Identity: Anonymous Whistleblower (Identity Protected)
-                    </p>
+                    <p className="mt-1 text-xs font-medium text-amber-700">{ui("Submitter Identity: Anonymous Whistleblower (Identity Protected)")}</p>
                   )}
-                  <p className="mt-1 text-xs text-slate-500">
-                    File: <strong>{selectedItem.filename}</strong> ({selectedItem.mime}, {(selectedItem.size / (1024*1024)).toFixed(2)} MB)
+                  <p className="mt-1 text-xs text-slate-500">{ui("File:") + " "}<strong>{selectedItem.filename}</strong> ({selectedItem.mime}, {(selectedItem.size / (1024*1024)).toFixed(2)} MB)
                   </p>
                 </div>
 
                 {/* MEDIA PREVIEW */}
                 <div className="mb-4 rounded border bg-slate-50 p-3">
-                  <h3 className="mb-2 text-xs font-semibold text-slate-700">Media Preview / साक्ष्य पूर्वावलोकन</h3>
+                  <h3 className="mb-2 text-xs font-semibold text-slate-700">{ui("Media Preview / साक्ष्य पूर्वावलोकन")}</h3>
                   {previewLoading ? (
-                    <p className="text-xs text-slate-500">Loading preview...</p>
+                    <p className="text-xs text-slate-500">{ui("Loading preview...")}</p>
                   ) : !previewUrl ? (
-                    <p className="text-xs text-slate-500">Preview not directly available.</p>
+                    <p className="text-xs text-slate-500">{ui("Preview not directly available.")}</p>
                   ) : selectedItem.mime.startsWith('image/') ? (
                     <img src={previewUrl} alt={selectedItem.filename} className="max-h-72 w-auto rounded border object-contain" />
                   ) : selectedItem.mime.startsWith('audio/') ? (
@@ -351,20 +341,20 @@ export function EvidenceInbox() {
                   ) : selectedItem.mime === 'application/pdf' ? (
                     <div className="text-center">
                       <embed src={previewUrl} type="application/pdf" className="h-72 w-full rounded border" />
-                      <a href={previewUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-blue-700 underline">Open PDF in new tab</a>
+                      <a href={previewUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-blue-700 underline">{ui("Open PDF in new tab")}</a>
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-500">Binary file. Use download button below.</p>
+                    <p className="text-xs text-slate-500">{ui("Binary file. Use download button below.")}</p>
                   )}
                 </div>
 
                 {/* JUDICIAL ACTIONS */}
                 <div className="mb-4 rounded border border-slate-200 bg-slate-50/70 p-3">
-                  <h3 className="mb-2 text-xs font-bold uppercase text-slate-700">Judicial Actions / अदालती कार्रवाई</h3>
+                  <h3 className="mb-2 text-xs font-bold uppercase text-slate-700">{ui("Judicial Actions / अदालती कार्रवाई")}</h3>
                   <div className="mb-2">
                     <input
                       type="text"
-                      placeholder="Optional note / order reference..."
+                      placeholder={ui("Optional note / order reference...")}
                       value={actionNote}
                       onChange={(e) => setActionNote(e.target.value)}
                       className="w-full rounded border border-slate-300 px-3 py-1.5 text-xs"
@@ -376,32 +366,26 @@ export function EvidenceInbox() {
                       disabled={actionSubmitting}
                       onClick={() => handleAction('seen')}
                       className={btn}
-                    >
-                      Mark "Seen" / देखा गया
-                    </button>
+                    >{ui("Mark \"Seen\" / देखा गया")}</button>
                     <button
                       type="button"
                       disabled={actionSubmitting}
                       onClick={() => handleAction('taken_on_record')}
                       className={btnPrimary}
-                    >
-                      Mark "Taken on record" / रिकॉर्ड पर लिया गया
-                    </button>
+                    >{ui("Mark \"Taken on record\" / रिकॉर्ड पर लिया गया")}</button>
                     <button
                       type="button"
                       disabled={actionSubmitting}
                       onClick={() => handleAction('shared_with_parties')}
                       className="rounded border border-purple-600 bg-purple-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-purple-800 disabled:opacity-50"
-                    >
-                      Mark "Shared with parties" / पक्षों को प्रेषित
-                    </button>
+                    >{ui("Mark \"Shared with parties\" / पक्षों को प्रेषित")}</button>
                   </div>
                 </div>
 
                 {/* ACTION HISTORY TIMELINE */}
                 {selectedItem.actionHistory && selectedItem.actionHistory.length > 0 && (
                   <div className="mb-4 text-xs">
-                    <h4 className="font-semibold text-slate-700">Custody & Action History:</h4>
+                    <h4 className="font-semibold text-slate-700">{ui("Custody & Action History:")}</h4>
                     <ul className="mt-1 space-y-1">
                       {selectedItem.actionHistory.map((act, idx) => (
                         <li key={idx} className="text-slate-600">
@@ -419,16 +403,12 @@ export function EvidenceInbox() {
                     type="button"
                     onClick={() => handleExportCertificate(selectedItem.id)}
                     className="rounded bg-indigo-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-800"
-                  >
-                    Export BSA s.63 Certificate (Schedule Part A & B)
-                  </button>
+                  >{ui("Export BSA s.63 Certificate (Schedule Part A & B)")}</button>
                   {certNotice && <p className="mt-2 text-xs font-medium text-green-700">{certNotice}</p>}
                 </div>
               </div>
             ) : (
-              <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-                Select an evidence item from the feed to view details, verify integrity, and take action.
-              </div>
+              <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">{ui("Select an evidence item from the feed to view details, verify integrity, and take action.")}</div>
             )}
           </div>
         </div>

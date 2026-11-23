@@ -1,3 +1,4 @@
+import { ui } from '../lib/i18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CaseRecord, HearingApi, HearingListItem, HearingRecording, SpeakerMarker } from '@courtplus/contracts';
@@ -16,7 +17,7 @@ const preferredMime = 'audio/webm;codecs=opus';
 export function HearingRecorder() {
   const hearing = hearingBridge();
   if (!hearing) {
-    return <Page title="Hearing recorder"><Empty title="Recording hearings works in the Court+ desktop app." hint="Open the desktop app on the court computer." /></Page>;
+    return <Page title={ui("Hearing recorder")}><Empty title={ui("Recording hearings works in the Court+ desktop app.")} hint={ui("Open the desktop app on the court computer.")} /></Page>;
   }
   return <Recorder hearing={hearing} />;
 }
@@ -142,36 +143,33 @@ function Recorder({ hearing }: { hearing: HearingApi }) {
   const recording = phase === 'recording' || phase === 'paused';
   const byId = new Map(cases.map(record => [record.id, record]));
   return (
-    <Page title="Hearing recorder" note="Records the hearing on this computer. The original audio is sealed with a SHA-256 hash, a signed receipt and an audit-log entry when you stop, and is never changed afterwards.">
+    <Page title={ui("Hearing recorder")} note={ui("Records the hearing on this computer. The original audio is sealed with a SHA-256 hash, a signed receipt and an audit-log entry when you stop, and is never changed afterwards.")}>
       <ErrorNote error={error} />
-      <section className="panel" aria-label="Recorder">
-        <label className="block font-semibold">Case
-          <select className="field-control" value={caseId} disabled={recording || phase === 'saving'} onChange={e => setCaseId(e.target.value)}>
-            {cases.length === 0 && <option value="">No saved cases yet</option>}
+      <section className="panel" aria-label={ui("Recorder")}>
+        <label className="block font-semibold">{ui("Case")}<select className="field-control" value={caseId} disabled={recording || phase === 'saving'} onChange={e => setCaseId(e.target.value)}>
+            {cases.length === 0 && <option value="">{ui("No saved cases yet")}</option>}
             {cases.map(record => <option key={record.id} value={record.id}>{caseLabel(record)}</option>)}
           </select>
         </label>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          {!recording && <button className={btnPrimary} disabled={!caseId || phase === 'saving'} onClick={() => void start()}>Start recording</button>}
-          {recording && <button className={btn} onClick={pause}>{phase === 'paused' ? 'Resume' : 'Pause'}</button>}
-          {recording && <button className={btnPrimary} onClick={() => void stop()}>Stop and seal</button>}
-          <span className="text-2xl font-bold tabular-nums" aria-label="Elapsed time" role="timer">{clock(elapsed)}</span>
-          {phase === 'paused' && <span className="muted">Paused</span>}
-          {phase === 'saving' && <span role="status" className="muted">Sealing the audio…</span>}
+          {!recording && <button className={btnPrimary} disabled={!caseId || phase === 'saving'} onClick={() => void start()}>{ui("Start recording")}</button>}
+          {recording && <button className={btn} onClick={pause}>{phase === 'paused' ? ui("Resume") : ui("Pause")}</button>}
+          {recording && <button className={btnPrimary} onClick={() => void stop()}>{ui("Stop and seal")}</button>}
+          <span className="text-2xl font-bold tabular-nums" aria-label={ui("Elapsed time")} role="timer">{clock(elapsed)}</span>
+          {phase === 'paused' && <span className="muted">{ui("Paused")}</span>}
+          {phase === 'saving' && <span role="status" className="muted">{ui("Sealing the audio…")}</span>}
         </div>
-        <div className="mt-3 h-3 w-full max-w-md overflow-hidden rounded-full bg-slate-200" role="meter" aria-label="Microphone level"
+        <div className="mt-3 h-3 w-full max-w-md overflow-hidden rounded-full bg-slate-200" role="meter" aria-label={ui("Microphone level")}
           aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(level * 100)}>
           <div className="h-full bg-emerald-600 transition-[width] duration-75" style={{ width: Math.round(level * 100) + '%' }} />
         </div>
         <label className="mt-3 flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={upload} disabled={recording} onChange={e => setUpload(e.target.checked)} />
-          Also send the audio and receipt to the Court+ evidence store, if the configured backend has one
-        </label>
+          <input type="checkbox" checked={upload} disabled={recording} onChange={e => setUpload(e.target.checked)} />{ui("Also send the audio and receipt to the Court+ evidence store, if the configured backend has one")}</label>
       </section>
 
-      <section className="panel mt-4" aria-label="Speaker markers">
-        <h2>Who is speaking</h2>
-        <p className="muted">Tap when a new person starts speaking. The transcript uses these taps for speaker names; nothing is identified from the voice.</p>
+      <section className="panel mt-4" aria-label={ui("Speaker markers")}>
+        <h2>{ui("Who is speaking")}</h2>
+        <p className="muted">{ui("Tap when a new person starts speaking. The transcript uses these taps for speaker names; nothing is identified from the voice.")}</p>
         <div className="flex flex-wrap gap-2">
           {speakerOptions.map(([value, label]) => <button key={value} className={btn} disabled={phase !== 'recording'} onClick={() => mark(value)}>{label}</button>)}
         </div>
@@ -179,27 +177,27 @@ function Recorder({ hearing }: { hearing: HearingApi }) {
           <li key={index}><span className="tabular-nums">{clock(marker.atMs)}</span> {speakerName(marker.speaker)}</li>)}</ol>}
       </section>
 
-      {result && <section className="panel mt-4" aria-label="Sealed recording" role="status">
-        <h2>Recording sealed</h2>
+      {result && <section className="panel mt-4" aria-label={ui("Sealed recording")} role="status">
+        <h2>{ui("Recording sealed")}</h2>
         <p className="break-all text-sm">SHA-256 {result.audioSha256}</p>
-        <p className="text-sm">{result.receipt ? 'Signed receipt saved.' : 'Not signed yet: unlock the signing key in Settings, then sign it from the transcript page. The hash is already in the audit log.'}
+        <p className="text-sm">{result.receipt ? ui("Signed receipt saved.") : ui("Not signed yet: unlock the signing key in Settings, then sign it from the transcript page. The hash is already in the audit log.")}
           {result.upload === 'uploaded' && ' Sent to the evidence store.'}{result.upload === 'failed' && ' The evidence store did not accept the upload; the local copy is safe.'}</p>
-        <Link className={btnPrimary + ' mt-2'} to={'/hearings/' + result.id}>Open transcript</Link>
+        <Link className={btnPrimary + ' mt-2'} to={'/hearings/' + result.id}>{ui("Open transcript")}</Link>
       </section>}
 
-      <section className="panel mt-4" aria-label="Recorded hearings">
-        <h2>Recorded hearings</h2>
-        {items.length === 0 ? <p className="muted">No hearings recorded yet.</p> : <table className="w-full text-sm">
-          <thead><tr className="text-left"><th>Started</th><th>Case</th><th>Length</th><th>Status</th><th /></tr></thead>
+      <section className="panel mt-4" aria-label={ui("Recorded hearings")}>
+        <h2>{ui("Recorded hearings")}</h2>
+        {items.length === 0 ? <p className="muted">{ui("No hearings recorded yet.")}</p> : <table className="w-full text-sm">
+          <thead><tr className="text-left"><th>{ui("Started")}</th><th>{ui("Case")}</th><th>{ui("Length")}</th><th>{ui("Status")}</th><th /></tr></thead>
           <tbody>{items.map(item => <tr key={item.id} className="border-t">
             <td>{new Date(item.startedAt).toLocaleString()}</td>
             <td>{caseLabel(byId.get(item.caseId), item.caseId)}</td>
             <td className="tabular-nums">{item.durationMs === undefined ? '—' : clock(item.durationMs)}</td>
-            <td>{item.state === 'interrupted' ? 'Interrupted' : (item.signed ? 'Sealed and signed' : 'Sealed, not signed')
+            <td>{item.state === 'interrupted' ? ui("Interrupted") : (item.signed ? 'Sealed and signed' : 'Sealed, not signed')
               + (item.transcriptVersions ? ` · ${item.transcriptVersions} transcript version(s)` : '')}</td>
             <td>{item.state === 'interrupted'
-              ? <button className={btn} onClick={() => void recover(item.id)}>Recover</button>
-              : <Link to={'/hearings/' + item.id}>Transcript</Link>}</td>
+              ? <button className={btn} onClick={() => void recover(item.id)}>{ui("Recover")}</button>
+              : <Link to={'/hearings/' + item.id}>{ui("Transcript")}</Link>}</td>
           </tr>)}</tbody>
         </table>}
       </section>

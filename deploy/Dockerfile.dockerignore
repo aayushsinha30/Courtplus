@@ -16,6 +16,8 @@ packages/*
 !packages/engine/**
 !packages/export/
 !packages/export/**
+!packages/guides/
+!packages/guides/**
 !data/
 data/*
 !data/crosswalk/
@@ -26,6 +28,8 @@ data/*
 !data/stats/**
 !data/i18n/
 !data/i18n/**
+!data/ui/
+!data/ui/**
 !templates/
 !templates/**
 !assets/

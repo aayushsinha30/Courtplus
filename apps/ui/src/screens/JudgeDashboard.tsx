@@ -1,3 +1,4 @@
+import { ui } from '../lib/i18n';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Bar,
@@ -124,8 +125,8 @@ export function JudgeDashboard() {
 
   return (
     <Page
-      title="Judge Performance & Backlog Dashboard"
-      note="Real-time daily filings vs. resolutions analytics, disposal velocity, and statutory NJDG aging distribution."
+      title={ui("Judge Performance & Backlog Dashboard")}
+      note={ui("Real-time daily filings vs. resolutions analytics, disposal velocity, and statutory NJDG aging distribution.")}
     >
       <ErrorNote error={error} />
 
@@ -133,23 +134,23 @@ export function JudgeDashboard() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm font-medium">
-            <span>Filter Judge / Bench:</span>
+            <span>{ui("Filter Judge / Bench:")}</span>
             <select
               value={selectedJudge}
               onChange={e => setSelectedJudge(e.target.value)}
               className="rounded border border-slate-300 bg-white px-2.5 py-1 text-sm font-normal"
             >
-              <option value="all">Entire Bench (All Judges)</option>
+              <option value="all">{ui("Entire Bench (All Judges)")}</option>
               {summary?.judges.map(j => (
                 <option key={j.judgeName} value={j.judgeName}>
-                  {j.judgeName} ({j.courtRoom ?? 'Courtroom'})
+                  {j.judgeName} ({j.courtRoom ?? ui("Courtroom")})
                 </option>
               ))}
             </select>
           </label>
 
           <label className="flex items-center gap-2 text-sm font-medium">
-            <span>As of Date:</span>
+            <span>{ui("As of Date:")}</span>
             <input
               type="date"
               value={asOf}
@@ -163,19 +164,17 @@ export function JudgeDashboard() {
           type="button"
           onClick={() => setAsOf(today)}
           className="text-xs text-blue-700 underline hover:text-blue-900"
-        >
-          Reset to Today
-        </button>
+        >{ui("Reset to Today")}</button>
       </div>
 
-      {loading && !summary && <p className="py-6 text-sm text-slate-500">Calculating judge performance metrics…</p>}
+      {loading && !summary && <p className="py-6 text-sm text-slate-500">{ui("Calculating judge performance metrics…")}</p>}
 
       {summary && summary.totalActiveCases === 0 && summary.totalDisposedCases === 0 && (
         <Empty
-          title="No case data recorded yet"
-          hint="Import orders or record case proceedings to populate judge backlog metrics."
+          title={ui("No case data recorded yet")}
+          hint={ui("Import orders or record case proceedings to populate judge backlog metrics.")}
           to="/import"
-          cta="Import an Order"
+          cta={ui("Import an Order")}
         />
       )}
 
@@ -184,33 +183,31 @@ export function JudgeDashboard() {
           {/* Top KPI Cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className={`rounded-lg border p-4 text-center ${clearanceTone(activeJudgeMetric.clearanceRate)}`}>
-              <span className="block text-xs font-semibold uppercase tracking-wider">Clearance Rate</span>
+              <span className="block text-xs font-semibold uppercase tracking-wider">{ui("Clearance Rate")}</span>
               <strong className="mt-1 block text-3xl font-extrabold">{`${activeJudgeMetric.clearanceRate}%`}</strong>
               <span className="mt-1 block text-xs opacity-90">
-                {activeJudgeMetric.clearanceRate >= 100 ? '✓ Arrears Reducing' : '▲ Below 100% Target'}
+                {activeJudgeMetric.clearanceRate >= 100 ? ui("✓ Arrears Reducing") : ui("▲ Below 100% Target")}
               </span>
             </div>
 
             <div className="rounded-lg border bg-white p-4 text-center shadow-sm">
-              <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500">Active Docket</span>
+              <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{ui("Active Docket")}</span>
               <strong className="mt-1 block text-3xl font-extrabold text-slate-800">{activeJudgeMetric.activeCases}</strong>
-              <span className="mt-1 block text-xs text-slate-500">Pending Matters</span>
+              <span className="mt-1 block text-xs text-slate-500">{ui("Pending Matters")}</span>
             </div>
 
             <div className="rounded-lg border bg-white p-4 text-center shadow-sm">
-              <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500">Disposed Matters</span>
+              <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{ui("Disposed Matters")}</span>
               <strong className="mt-1 block text-3xl font-extrabold text-green-700">{activeJudgeMetric.disposedCases}</strong>
               <span className="mt-1 block text-xs text-slate-500">
-                {activeJudgeMetric.totalFiled} Total Instituted
-              </span>
+                {activeJudgeMetric.totalFiled}{" " + ui("Total Instituted")}</span>
             </div>
 
             <div className="rounded-lg border bg-white p-4 text-center shadow-sm">
-              <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500">Adjournment Ratio</span>
+              <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{ui("Adjournment Ratio")}</span>
               <strong className="mt-1 block text-3xl font-extrabold text-blue-900">{activeJudgeMetric.adjournmentRatio}</strong>
               <span className="mt-1 block text-xs text-slate-500">
-                {activeJudgeMetric.totalAdjournmentsGranted} Total Adjournments
-              </span>
+                {activeJudgeMetric.totalAdjournmentsGranted}{" " + ui("Total Adjournments")}</span>
             </div>
           </div>
 
@@ -219,10 +216,10 @@ export function JudgeDashboard() {
             {/* Chart 1: Filings vs Disposals Trend */}
             <div className="rounded-lg border bg-white p-4 shadow-sm">
               <div className="mb-2">
-                <h3 className="font-semibold text-slate-800">Daily Filings vs. Resolutions Velocity</h3>
-                <p className="text-xs text-slate-500">Real-time daily inflow vs judicial clearance throughput.</p>
+                <h3 className="font-semibold text-slate-800">{ui("Daily Filings vs. Resolutions Velocity")}</h3>
+                <p className="text-xs text-slate-500">{ui("Real-time daily inflow vs judicial clearance throughput.")}</p>
               </div>
-              <div className="h-64" role="img" aria-label="Line chart comparing instituted filings vs disposed cases">
+              <div className="h-64" role="img" aria-label={ui("Line chart comparing instituted filings vs disposed cases")}>
                 {activeJudgeMetric.timeline.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={activeJudgeMetric.timeline}>
@@ -236,9 +233,7 @@ export function JudgeDashboard() {
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex h-full items-center justify-center text-xs text-slate-400">
-                    Sufficient timeline dates will appear as cases progress.
-                  </div>
+                  <div className="flex h-full items-center justify-center text-xs text-slate-400">{ui("Sufficient timeline dates will appear as cases progress.")}</div>
                 )}
               </div>
             </div>
@@ -246,10 +241,10 @@ export function JudgeDashboard() {
             {/* Chart 2: NJDG Pendency Aging Pyramid */}
             <div className="rounded-lg border bg-white p-4 shadow-sm">
               <div className="mb-2">
-                <h3 className="font-semibold text-slate-800">NJDG Statutory Pendency Aging Breakdown</h3>
-                <p className="text-xs text-slate-500">Matches official National Judicial Data Grid aging categories.</p>
+                <h3 className="font-semibold text-slate-800">{ui("NJDG Statutory Pendency Aging Breakdown")}</h3>
+                <p className="text-xs text-slate-500">{ui("Matches official National Judicial Data Grid aging categories.")}</p>
               </div>
-              <div className="h-64" role="img" aria-label="Bar chart showing case aging distribution">
+              <div className="h-64" role="img" aria-label={ui("Bar chart showing case aging distribution")}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={agingChartData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -266,18 +261,18 @@ export function JudgeDashboard() {
           {/* Judge Roster Breakdown Table */}
           {summary && summary.judges.length > 1 && (
             <div className="rounded-lg border bg-white p-4 shadow-sm">
-              <h3 className="mb-2 font-semibold text-slate-800">Individual Bench Performance Roster</h3>
+              <h3 className="mb-2 font-semibold text-slate-800">{ui("Individual Bench Performance Roster")}</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100 text-slate-600">
                     <tr>
-                      <th className="p-2">Judge Name</th>
-                      <th className="p-2">Courtroom</th>
-                      <th className="p-2">Active Cases</th>
-                      <th className="p-2">Disposed</th>
-                      <th className="p-2">Clearance Rate</th>
-                      <th className="p-2">Adjournments</th>
-                      <th className="p-2">Avg Lifespan</th>
+                      <th className="p-2">{ui("Judge Name")}</th>
+                      <th className="p-2">{ui("Courtroom")}</th>
+                      <th className="p-2">{ui("Active Cases")}</th>
+                      <th className="p-2">{ui("Disposed")}</th>
+                      <th className="p-2">{ui("Clearance Rate")}</th>
+                      <th className="p-2">{ui("Adjournments")}</th>
+                      <th className="p-2">{ui("Avg Lifespan")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y text-slate-700">
@@ -301,7 +296,7 @@ export function JudgeDashboard() {
                           </span>
                         </td>
                         <td className="p-2">{j.totalAdjournmentsGranted}</td>
-                        <td className="p-2">{j.avgCaseLifespanDays} days</td>
+                        <td className="p-2">{j.avgCaseLifespanDays}{" " + ui("days")}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -312,25 +307,23 @@ export function JudgeDashboard() {
 
           {/* Official Benchmark Comparison Card */}
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <h3 className="text-sm font-bold text-slate-800">
-              National & State Judicial Context (data.gov.in & NJDG Benchmarks)
-            </h3>
+            <h3 className="text-sm font-bold text-slate-800">{ui("National & State Judicial Context (data.gov.in & NJDG Benchmarks)")}</h3>
             <p className="mt-1 text-xs text-slate-600">
               Official figures to contextualize local judicial velocity against nationwide court load:
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-3 text-xs">
               <div className="rounded bg-white p-3 border">
-                <span className="text-slate-500 block">District 10+ Year Pendency (India)</span>
+                <span className="text-slate-500 block">{ui("District 10+ Year Pendency (India)")}</span>
                 <strong className="text-sm font-bold text-slate-900">52,56,293 cases</strong>
                 <p className="mt-1 text-[11px] text-slate-500">Source: Open Government Data (data.gov.in), 27 March 2026</p>
               </div>
               <div className="rounded bg-white p-3 border">
-                <span className="text-slate-500 block">District 10+ Year Pendency (Chhattisgarh)</span>
+                <span className="text-slate-500 block">{ui("District 10+ Year Pendency (Chhattisgarh)")}</span>
                 <strong className="text-sm font-bold text-slate-900">1,166 cases</strong>
                 <p className="mt-1 text-[11px] text-slate-500">Source: NJDG State Return, 27 March 2026</p>
               </div>
               <div className="rounded bg-white p-3 border">
-                <span className="text-slate-500 block">High Court Judge Vacancies (India / CG)</span>
+                <span className="text-slate-500 block">{ui("High Court Judge Vacancies (India / CG)")}</span>
                 <strong className="text-sm font-bold text-slate-900">308 vacant / 7 in CG</strong>
                 <p className="mt-1 text-[11px] text-slate-500">Source: Rajya Sabha returns, 30 January 2026</p>
               </div>

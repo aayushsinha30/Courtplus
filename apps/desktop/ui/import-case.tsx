@@ -1,3 +1,4 @@
+import { ui } from '../../ui/src/lib/i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CaseRecord, Charge, CourtPlusApi, Person, Tri } from '@courtplus/contracts';
@@ -80,25 +81,22 @@ export function ImportCase() {
   const suggestions = doc?.suggestions.map((suggestion, i) => ({ suggestion, i, field: suggestionTarget(suggestion) }))
     .filter(item => item.field) ?? [];
 
-  return <Page title="Import order" note="Review the extracted order and save confirmed facts. Exclude sealed, in-camera and other protected orders.">
+  return <Page title={ui("Import order")} note={ui("Review the extracted order and save confirmed facts. Exclude sealed, in-camera and other protected orders.")}>
     <ErrorNote error={error} />
     {!doc ? <label className="panel import-picker">
-      {busy ? 'Reading order…' : 'Choose PDF or image'}
+      {busy ? ui("Reading order…") : ui("Choose PDF or image")}
       <input className="ml-3" type="file" accept="application/pdf,image/png,image/jpeg" disabled={busy}
         onChange={event => void read(event.target.files?.[0])} />
     </label> : <>
-      <button className={btn + ' mb-4'} onClick={() => setDoc(undefined)}>Import another</button>
-      {doc.aiUnavailable && <p role="status" className="mb-4 rounded bg-amber-50 p-2 text-sm text-amber-800">
-        ▲ Automated reading is unavailable. Names are masked by rules only and the suggestions
-        below come from text patterns. Check the masking and enter every fact from the order by hand.
-      </p>}
+      <button className={btn + ' mb-4'} onClick={() => setDoc(undefined)}>{ui("Import another")}</button>
+      {doc.aiUnavailable && <p role="status" className="mb-4 rounded bg-amber-50 p-2 text-sm text-amber-800">{ui("▲ Automated reading is unavailable. Names are masked by rules only and the suggestions below come from text patterns. Check the masking and enter every fact from the order by hand.")}</p>}
       <div className="grid gap-4 lg:grid-cols-2">
-        <section aria-label="Anonymised order and suggestions" className="min-w-0 space-y-3">
-          <h2 className="font-semibold">Anonymised order {doc.ocr ? '· OCR' : ''}</h2>
+        <section aria-label={ui("Anonymised order and suggestions")} className="min-w-0 space-y-3">
+          <h2 className="font-semibold">{ui("Anonymised order") + " "}{doc.ocr ? '· OCR' : ''}</h2>
           <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded border bg-white p-3 text-sm">{doc.redactedText}</pre>
-          <h2 className="font-semibold">Suggested facts</h2>
+          <h2 className="font-semibold">{ui("Suggested facts")}</h2>
           <div className="max-h-96 space-y-2 overflow-auto">
-            {suggestions.length === 0 && <p className="text-sm">No suggestions. Enter the facts from the order.</p>}
+            {suggestions.length === 0 && <p className="text-sm">{ui("No suggestions. Enter the facts from the order.")}</p>}
             {suggestions.map(({ suggestion, i, field }) => {
               const value = field === 'bailOutcome' ? bailOutcomes[suggestion.value as keyof typeof bailOutcomes] : suggestion.value;
               return <div className="rounded border bg-white p-2" key={i}>
@@ -107,28 +105,27 @@ export function ImportCase() {
                 <button type="button" className={btn} disabled={used.includes(i)} onClick={() => {
                   setFacts(previous => applySuggestion(previous, suggestion));
                   setUsed(previous => [...previous, i]);
-                }}>{used.includes(i) ? 'Added to review' : 'Use suggestion'}</button>
+                }}>{used.includes(i) ? ui("Added to review") : ui("Use suggestion")}</button>
               </div>;
             })}
           </div>
         </section>
         <form onSubmit={event => void save(event)} className="space-y-3 rounded border bg-white p-4">
-          <h2 className="font-semibold">Confirmed case facts</h2>
-          <label>Person
-            <select className={fieldStyle} value={selected} onChange={event => setSelected(event.target.value)}>
-              <option value="">New person</option>
+          <h2 className="font-semibold">{ui("Confirmed case facts")}</h2>
+          <label>{ui("Person")}<select className={fieldStyle} value={selected} onChange={event => setSelected(event.target.value)}>
+              <option value="">{ui("New person")}</option>
               {people.map(person => <option key={person.id} value={person.id}>{person.alias}</option>)}
             </select>
           </label>
           {!selected && <>
-            <label>Person alias<input name="alias" className={fieldStyle} required
+            <label>{ui("Person alias")}<input name="alias" className={fieldStyle} required
               pattern="(?:Accused|Person|Prisoner|Undertrial)[ \\-][0-9]{1,12}" placeholder="Accused-01" /></label>
-            <label>Prisoner type<select name="prisonerType" className={fieldStyle}>
-              <option value="undertrial">Undertrial</option><option value="convict_appellant">Convict-appellant</option>
+            <label>{ui("Prisoner type")}<select name="prisonerType" className={fieldStyle}>
+              <option value="undertrial">{ui("Undertrial")}</option><option value="convict_appellant">{ui("Convict-appellant")}</option>
             </select></label>
             {([['prior', 'Prior conviction'], ['holds', 'Other holds'], ['juvenile', 'Juvenile claim']] as const).map(([key, label]) =>
               <label key={key}>{label}<select name={key} className={fieldStyle}>
-                <option value="unknown">Unknown</option><option value="yes">Yes</option><option value="no">No</option>
+                <option value="unknown">{ui("Unknown")}</option><option value="yes">{ui("Yes")}</option><option value="no">{ui("No")}</option>
               </select></label>)}
           </>}
           {(Object.entries(reviewFields) as [Field, string][]).map(([key, label]) => {
@@ -138,29 +135,29 @@ export function ImportCase() {
                 onChange={event => onChange(event.target.value)} />
                 : key === 'bailOutcome' ? <select className={fieldStyle} value={facts[key] ?? ''}
                   onChange={event => onChange(event.target.value)}>
-                  <option value="">Not decided in this order</option>
+                  <option value="">{ui("Not decided in this order")}</option>
                   {Object.entries(bailOutcomes).map(([value, text]) => <option key={value} value={value}>{text}</option>)}
                 </select>
                 : <input className={fieldStyle} value={facts[key] ?? ''} type={dateFields.includes(key) ? 'date' : 'text'}
                   onChange={event => onChange(event.target.value)} />}
             </label>;
           })}
-          <label>Judicial custody end<input name="judicialEnd" type="date" className={fieldStyle} /></label>
-          <label className="block"><input name="ongoing" type="checkbox" /> Judicial custody is ongoing</label>
-          <label>Other court event<select name="otherEvent" className={fieldStyle}>
-            <option value="">None</option>
+          <label>{ui("Judicial custody end")}<input name="judicialEnd" type="date" className={fieldStyle} /></label>
+          <label className="block"><input name="ongoing" type="checkbox" />{" " + ui("Judicial custody is ongoing")}</label>
+          <label>{ui("Other court event")}<select name="otherEvent" className={fieldStyle}>
+            <option value="">{ui("None")}</option>
             {Object.entries(otherEvents).map(([value, text]) => <option key={value} value={value}>{text}</option>)}
           </select></label>
-          <label>Other court event date<input name="otherEventOn" type="date" className={fieldStyle} /></label>
-          <label>Charge stage<select name="stage" className={fieldStyle}>
-            <option value="FIR">FIR</option><option value="FRAMED">Framed and verified</option>
+          <label>{ui("Other court event date")}<input name="otherEventOn" type="date" className={fieldStyle} /></label>
+          <label>{ui("Charge stage")}<select name="stage" className={fieldStyle}>
+            <option value="FIR">FIR</option><option value="FRAMED">{ui("Framed and verified")}</option>
           </select></label>
-          <label>Pending stage<select name="pendingStatus" className={fieldStyle}>
+          <label>{ui("Pending stage")}<select name="pendingStatus" className={fieldStyle}>
             {['investigation', 'inquiry', 'trial', 'appeal', 'disposed'].map(stage => <option key={stage}>{stage}</option>)}
           </select></label>
-          <label>Confirmed by<input className={fieldStyle} required value={confirmedBy}
-            placeholder="Name and role of the person confirming" onChange={event => setConfirmerOverride(event.target.value)} /></label>
-          <button className={btnPrimary} disabled={busy}>Save confirmed case</button>
+          <label>{ui("Confirmed by")}<input className={fieldStyle} required value={confirmedBy}
+            placeholder={ui("Name and role of the person confirming")} onChange={event => setConfirmerOverride(event.target.value)} /></label>
+          <button className={btnPrimary} disabled={busy}>{ui("Save confirmed case")}</button>
         </form>
       </div>
     </>}

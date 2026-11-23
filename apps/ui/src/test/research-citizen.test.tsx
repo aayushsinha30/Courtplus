@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import {
-  HINT_LABEL, RESEARCH_INSTALLING, type CaseRecord, type CourtPlusApi, type PrecedentHit, type ResearchApi,
+  HINT_LABEL, RESEARCH_INSTALLING, type CaseRecord, type CourtPlusApi, type HearingApi, type PrecedentHit, type ResearchApi,
 } from '@courtplus/contracts';
 import india from '../../../../data/stats/india.json';
 import { App } from '../App';
@@ -55,7 +55,7 @@ function bridge(over: Partial<ResearchApi> = {}): ResearchApi {
 }
 
 beforeEach(() => { localStorage.clear(); setRoleOverride(undefined); });
-afterEach(() => { delete window.courtplusResearch; });
+afterEach(() => { delete window.courtplusResearch; delete window.courtplusHearing; });
 
 describe('research helpers', () => {
   it('highlights query words at word starts, ignoring case and stop words', () => {
@@ -191,6 +191,9 @@ describe('Track my case', () => {
   it('finds a case however the number is typed', () => {
     expect(findCase([fictionalCase], ' fictional-7-2026 ')?.id).toBe('fictional-c7');
     expect(findCase([fictionalCase], 'FICTIONAL 8/2026')).toBeUndefined();
+    const sameNumber = { ...fictionalCase, id: 'fictional-c8', cnr: 'FX001' };
+    expect(findCase([fictionalCase, sameNumber], 'FICTIONAL 7/2026')).toBeUndefined();
+    expect(findCase([fictionalCase, sameNumber], 'FX-001')).toBe(sameNumber);
   });
 
   it('shows stage, next date, history and the eCourts link', async () => {
@@ -202,14 +205,77 @@ describe('Track my case', () => {
     expect(status).toHaveTextContent('trial — The court is hearing evidence');
     expect(status).toHaveTextContent('Next date: 2999-01-01 (Hearing)');
     expect(status).toHaveTextContent('Charge sheet: the police filed their final report in court — Sample charge sheet filed');
-    expect(status).toHaveTextContent('has not published a signed hearing summary');
+    expect(await within(status).findByText(/No signed hearing transcript/)).toBeInTheDocument();
   });
 
   it('says when the office has no such case', async () => {
     wrap(<TrackCase />);
     await userEvent.type(screen.getByLabelText('Case number or CNR'), 'FICTIONAL-404');
     await userEvent.click(screen.getByRole('button', { name: 'Find my case' }));
-    expect(await screen.findByText(/has no case with that number/)).toBeInTheDocument();
+    expect(await screen.findByText(/could not find a unique case with that number/)).toBeInTheDocument();
+  });
+
+  it('groups material from the latest signed transcript of the selected case and keeps other cases out', async () => {
+    const selected = { id: 'hearing-1', caseId: fictionalCase.id, startedAt: '2026-01-06T19:00:00Z', state: 'recorded' as const, transcriptVersions: 3 };
+    const signed = {
+      recordingId: selected.id, version: 2, receipt: 'signed fixture receipt', kind: 'edited' as const,
+      audioSha256: 'a'.repeat(64), textSha256: 'b'.repeat(64), segments: [], edits: [], createdAt: selected.startedAt,
+    };
+    const transcripts = vi.fn(async (id: string) => {
+      if (id === 'unavailable') throw new Error('Fictional unavailable transcript');
+      return [{ ...signed, version: 3, receipt: undefined }, signed, { ...signed, version: 1 }];
+    });
+    const summary = vi.fn<HearingApi['summary']>(async () => ({
+      label: 'Machine summary - verify before use', method: 'Fictional extractive source', basedOnVersion: 2,
+      sentences: [
+        { text: 'A witness described the exhibit.', segmentId: 1, startMs: 8000, keywords: ['witness', 'evidence'], score: 1 },
+        { text: 'The matter was listed on a later date.', segmentId: 1, startMs: 8000, keywords: ['next date'], score: 1 },
+      ],
+    }));
+    window.courtplusHearing = {
+      list: vi.fn(async () => [selected, { ...selected, id: 'unavailable' }, { ...selected, id: 'another-case', caseId: 'unrelated' }]),
+      transcripts, summary,
+    } as unknown as HearingApi;
+    const record = { ...fictionalCase, events: [...fictionalCase.events,
+      { on: '2026-01-07', kind: 'hearing' as const, source: { docId: 'fictional-order', page: 2 } }] };
+    wrap(<TrackCase />, mockApi({ listCases: vi.fn(async () => [record]) }));
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Case number or CNR'), 'FICTIONAL 7/2026');
+    await user.click(screen.getByRole('button', { name: 'Find my case' }));
+    const section = await screen.findByRole('region', { name: 'Hearing breakdowns' });
+    expect(await within(section).findByText(/Signed transcript version 2/)).toHaveTextContent('7 January 2026');
+    expect(section).toHaveTextContent('Dates or postponements mentioned');
+    expect(section).toHaveTextContent('Evidence or witnesses mentioned');
+    expect(section).toHaveTextContent('00:08');
+    expect(section).toHaveTextContent('Some hearing breakdowns could not be loaded');
+    expect(screen.getByRole('region', { name: 'Case status' })).toHaveTextContent('Source document page 2');
+    expect(summary).toHaveBeenCalledExactlyOnceWith(selected.id, 2);
+    expect(transcripts).not.toHaveBeenCalledWith('another-case');
+  });
+
+  it('calculates net receipts or out-of-pocket costs without submitting settlement inputs to the API', async () => {
+    const listCases = vi.fn(async () => [fictionalCase]);
+    wrap(<TrackCase />, mockApi({ listCases }));
+    const user = userEvent.setup();
+    const estimator = within(screen.getByRole('region', { name: 'Settlement estimator' }));
+    await user.type(estimator.getByLabelText('Upfront amount (₹)'), '1000.25');
+    await user.type(estimator.getByLabelText('Amount per instalment (₹)'), '500.10');
+    await user.click(estimator.getByRole('button', { name: 'Calculate estimate' }));
+    expect(estimator.getByRole('alert')).toHaveTextContent('Enter both the amount per instalment');
+    await user.type(estimator.getByLabelText('Number of instalments'), '3');
+    await user.type(estimator.getByLabelText('Your estimated fees and costs (₹)'), '100.05');
+    await user.type(estimator.getByLabelText('Your comparison amount after costs (₹, optional)'), '2500');
+    await user.click(estimator.getByRole('button', { name: 'Calculate estimate' }));
+    expect(estimator.getByLabelText('Settlement estimate')).toHaveTextContent('You would receive after costs₹2,400.50');
+    expect(estimator.getByLabelText('Settlement estimate')).toHaveTextContent('₹99.50 below');
+    await user.selectOptions(estimator.getByLabelText('Under the proposal, I would'), 'pay');
+    expect(estimator.queryByLabelText('Settlement estimate')).not.toBeInTheDocument();
+    await user.click(estimator.getByRole('button', { name: 'Calculate estimate' }));
+    expect(estimator.getByLabelText('Settlement estimate')).toHaveTextContent('You would pay including costs₹2,600.60');
+    await user.click(estimator.getByRole('button', { name: 'Clear amounts' }));
+    expect(estimator.queryByLabelText('Settlement estimate')).not.toBeInTheDocument();
+    expect(estimator.getByLabelText('Upfront amount (₹)')).toHaveValue(null);
+    expect(listCases).not.toHaveBeenCalled();
   });
 });
 
