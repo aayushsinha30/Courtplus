@@ -24,7 +24,7 @@
     "@courtplus/contracts": "0.0.0",
     "@noble/hashes": "2.4.0",
     "@noble/post-quantum": "0.7.1",
-    "canonicalize": "2.1.0",
+    "canonicalize": "5.1.0",
     "exceljs": "4.4.0",
     "jsqr": "1.4.0",
     "qrcode": "1.5.4"
