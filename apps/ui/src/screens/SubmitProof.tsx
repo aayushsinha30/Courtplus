@@ -1,3 +1,4 @@
+import { ui } from '../lib/i18n';
 import { evidenceBridge } from '../lib/api';
 import { useState, type FormEvent, type ChangeEvent } from 'react';
 import type { EvidenceMode, EvidenceReceiptResponse, EvidenceStatusResponse } from '@courtplus/contracts';
@@ -139,8 +140,8 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
 
   return (
     <Page
-      title={isLawyer ? 'File Evidence (Counsel / Advocate)' : 'Submit Proof / साक्ष्य प्रस्तुत करें'}
-      note={isLawyer ? 'Official filing of case evidence with cryptographic receipt under Bharatiya Sakshya Adhiniyam, 2023.' : 'Citizen-to-judge secure vault and anonymous whistleblower channel.'}
+      title={isLawyer ? ui("File Evidence (Counsel / Advocate)") : ui("Submit Proof / साक्ष्य प्रस्तुत करें")}
+      note={isLawyer ? ui("Official filing of case evidence with cryptographic receipt under Bharatiya Sakshya Adhiniyam, 2023.") : ui("Citizen-to-judge secure vault and anonymous whistleblower channel.")}
     >
       {/* TABS */}
       <div className="mb-4 flex gap-2 border-b pb-2">
@@ -149,15 +150,13 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
           onClick={() => setActiveTab('submit')}
           className={`rounded px-3 py-1.5 text-sm font-semibold ${activeTab === 'submit' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700'}`}
         >
-          {isLawyer ? 'File Evidence / साक्ष्य दाखिल करें' : 'Submit Evidence / साक्ष्य भेजें'}
+          {isLawyer ? ui("File Evidence / साक्ष्य दाखिल करें") : ui("Submit Evidence / साक्ष्य भेजें")}
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('status')}
           className={`rounded px-3 py-1.5 text-sm font-semibold ${activeTab === 'status' ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700'}`}
-        >
-          Check Status by Code / रसीद कोड से स्थिति जांचें
-        </button>
+        >{ui("Check Status by Code / रसीद कोड से स्थिति जांचें")}</button>
       </div>
 
       {activeTab === 'submit' && (
@@ -172,16 +171,16 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
                 onClick={() => setMode('identified')}
                 className={`flex-1 rounded-lg border-2 p-3 text-center transition-colors ${mode === 'identified' ? 'border-blue-700 bg-blue-50 text-blue-900 font-semibold' : 'border-slate-300 bg-white text-slate-600'}`}
               >
-                <div>Identified Submission</div>
-                <div className="text-xs text-slate-500 font-normal">Tied to case, shared with parties per natural justice</div>
+                <div>{ui("Identified Submission")}</div>
+                <div className="text-xs text-slate-500 font-normal">{ui("Tied to case, shared with parties per natural justice")}</div>
               </button>
               <button
                 type="button"
                 onClick={() => setMode('anonymous')}
                 className={`flex-1 rounded-lg border-2 p-3 text-center transition-colors ${mode === 'anonymous' ? 'border-amber-600 bg-amber-50 text-amber-900 font-semibold' : 'border-slate-300 bg-white text-slate-600'}`}
               >
-                <div>Anonymous Whistleblower Tip</div>
-                <div className="text-xs text-slate-500 font-normal">Identity-blind, no personal data or IP stored</div>
+                <div>{ui("Anonymous Whistleblower Tip")}</div>
+                <div className="text-xs text-slate-500 font-normal">{ui("Identity-blind, no personal data or IP stored")}</div>
               </button>
             </div>
           )}
@@ -190,18 +189,18 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
             {mode === 'identified' && (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">{isLawyer ? 'Advocate Name' : 'Full Name'} *</label>
+                  <label className="block text-xs font-semibold text-slate-700">{isLawyer ? ui("Advocate Name") : ui("Full Name")} *</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder={isLawyer ? 'e.g. Adv. Rajesh Verma' : 'Your legal name'}
+                    placeholder={isLawyer ? 'e.g. Adv. Rajesh Verma' : ui("Your legal name")}
                     className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">Phone Number *</label>
+                  <label className="block text-xs font-semibold text-slate-700">{ui("Phone Number *")}</label>
                   <input
                     type="tel"
                     required
@@ -212,7 +211,7 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-700">Email Address (Optional)</label>
+                  <label className="block text-xs font-semibold text-slate-700">{ui("Email Address (Optional)")}</label>
                   <input
                     type="email"
                     value={email}
@@ -226,7 +225,7 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-semibold text-slate-700">Case Reference (CNR / Case No) *</label>
+                <label className="block text-xs font-semibold text-slate-700">{ui("Case Reference (CNR / Case No) *")}</label>
                 <input
                   type="text"
                   required
@@ -237,7 +236,7 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700">Court / Police Station (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-700">{ui("Court / Police Station (Optional)")}</label>
                 <input
                   type="text"
                   value={court}
@@ -249,20 +248,19 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">Evidence Description *</label>
+              <label className="block text-xs font-semibold text-slate-700">{ui("Evidence Description *")}</label>
               <textarea
                 required
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe what this evidence demonstrates..."
+                placeholder={ui("Describe what this evidence demonstrates...")}
                 className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700">
-                Attach File * <span className="font-normal text-slate-500">(Max 50 MB: JPG, PNG, WEBP, PDF, MP3, M4A, WAV, WEBM, MP4)</span>
+              <label className="block text-xs font-semibold text-slate-700">{ui("Attach File *") + " "}<span className="font-normal text-slate-500">{ui("(Max 50 MB: JPG, PNG, WEBP, PDF, MP3, M4A, WAV, WEBM, MP4)")}</span>
               </label>
               <input
                 type="file"
@@ -278,37 +276,31 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
               disabled={submitting}
               className={`w-full py-2.5 ${btnPrimary}`}
             >
-              {submitting ? 'Encrypting & Sealing in Vault...' : isLawyer ? 'File Evidence on Record' : 'Submit Encrypted Evidence'}
+              {submitting ? ui("Encrypting & Sealing in Vault...") : isLawyer ? 'File Evidence on Record' : 'Submit Encrypted Evidence'}
             </button>
           </form>
 
           {/* RECEIPT MODAL / DISPLAY */}
           {receipt && (
             <div className="mt-6 rounded-lg border border-emerald-400 bg-emerald-50 p-6 shadow-sm">
-              <h3 className="text-base font-bold text-emerald-900">✓ Evidence Received and Cryptographically Sealed</h3>
-              <p className="mt-1 text-xs text-emerald-800">
-                Encrypted at rest with AES-256-GCM. Signed with Ed25519 over RFC 8785 canonical JSON.
-              </p>
+              <h3 className="text-base font-bold text-emerald-900">{ui("✓ Evidence Received and Cryptographically Sealed")}</h3>
+              <p className="mt-1 text-xs text-emerald-800">{ui("Encrypted at rest with AES-256-GCM. Signed with Ed25519 over RFC 8785 canonical JSON.")}</p>
 
               {receipt.receiptCode && (
                 <div className="my-4 rounded border-2 border-dashed border-amber-500 bg-amber-100 p-4 text-center">
-                  <p className="text-xs font-bold uppercase tracking-wider text-amber-900">
-                    Important: Save Your 128-bit Receipt Code (Shown Once Only)
-                  </p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-900">{ui("Important: Save Your 128-bit Receipt Code (Shown Once Only)")}</p>
                   <p className="mt-1 font-mono text-xl font-bold tracking-widest text-amber-950 select-all">
                     {receipt.receiptCode}
                   </p>
-                  <p className="mt-1 text-xs text-amber-800">
-                    You will need this code to check the status of your anonymous submission.
-                  </p>
+                  <p className="mt-1 text-xs text-amber-800">{ui("You will need this code to check the status of your anonymous submission.")}</p>
                 </div>
               )}
 
               <div className="mt-3 space-y-1 text-xs text-slate-700">
-                <div><strong>Vault ID:</strong> <span className="font-mono">{receipt.id}</span></div>
+                <div><strong>{ui("Vault ID:")}</strong> <span className="font-mono">{receipt.id}</span></div>
                 <div><strong>SHA-256:</strong> <span className="font-mono break-all">{receipt.sha256}</span></div>
-                <div><strong>Timestamp:</strong> {receipt.receivedAt}</div>
-                <div><strong>Mode:</strong> {receipt.mode.toUpperCase()}</div>
+                <div><strong>{ui("Timestamp:")}</strong> {receipt.receivedAt}</div>
+                <div><strong>{ui("Mode:")}</strong> {receipt.mode.toUpperCase()}</div>
               </div>
             </div>
           )}
@@ -321,13 +313,13 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
           <ErrorNote error={statusError} />
           <form onSubmit={handleCheckStatus} className="space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
             <div>
-              <label className="block text-xs font-semibold text-slate-700">128-bit Anonymous Receipt Code</label>
+              <label className="block text-xs font-semibold text-slate-700">{ui("128-bit Anonymous Receipt Code")}</label>
               <input
                 type="text"
                 required
                 value={statusCode}
                 onChange={(e) => setStatusCode(e.target.value)}
-                placeholder="Enter 32-character receipt code"
+                placeholder={ui("Enter 32-character receipt code")}
                 className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm font-mono"
               />
             </div>
@@ -336,7 +328,7 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
               disabled={statusChecking}
               className={`w-full py-2 ${btnPrimary}`}
             >
-              {statusChecking ? 'Querying Vault...' : 'Check Status'}
+              {statusChecking ? ui("Querying Vault...") : ui("Check Status")}
             </button>
           </form>
 
@@ -353,10 +345,10 @@ export function SubmitProof({ initialRole = 'citizen' }: Props) {
                 </span>
               </div>
               <div className="mt-3 space-y-1 text-xs text-slate-600">
-                <div><strong>Submitted On:</strong> {new Date(statusResult.receivedAt).toLocaleString()}</div>
-                <div><strong>Vault ID:</strong> <span className="font-mono">{statusResult.id}</span></div>
-                <div><strong>SHA-256 Hash:</strong> <span className="font-mono break-all">{statusResult.sha256}</span></div>
-                {statusResult.description && <div><strong>Description:</strong> {statusResult.description}</div>}
+                <div><strong>{ui("Submitted On:")}</strong> {new Date(statusResult.receivedAt).toLocaleString()}</div>
+                <div><strong>{ui("Vault ID:")}</strong> <span className="font-mono">{statusResult.id}</span></div>
+                <div><strong>{ui("SHA-256 Hash:")}</strong> <span className="font-mono break-all">{statusResult.sha256}</span></div>
+                {statusResult.description && <div><strong>{ui("Description:")}</strong> {statusResult.description}</div>}
               </div>
             </div>
           )}

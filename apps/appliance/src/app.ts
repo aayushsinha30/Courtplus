@@ -184,6 +184,7 @@ export async function buildApp(options: Options) {
   for (const [name, type] of [['cloud.js', 'text/javascript'], ['cloud.css', 'text/css']]) {
     app.get('/' + name, async (_, reply) => reply.type(type).send(readFileSync(join(web, name))));
   }
+  app.get('/cloud-hi.json', async (_, reply) => reply.type('application/json').send(readFileSync(join(root, 'data', 'ui', 'hi.json'))));
   app.get('/login', async (_, reply) => page(reply, 'Sign in', [
     '<form id="sign-in">',
     '<label>Account<input name="username" autocomplete="username" required></label>',

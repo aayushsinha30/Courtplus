@@ -2,23 +2,23 @@ import { useState, type FormEvent } from 'react';
 import type { Profile as ProfileDetails } from '@courtplus/contracts';
 import { btn, btnPrimary, ErrorNote, errMsg, Page } from '../components/ui';
 import { useApp } from '../lib/context';
-import { RIGHTS_CARD_LANGS } from '../lib/i18n';
+import { ui } from '../lib/i18n';
+import { UI_LANGUAGES } from '../lib/preferences';
 import { PROFILE_ROLES, setRoleOverride } from '../lib/roles';
 import { RoleSwitch } from '../components/RoleSwitch';
 
 export function ProfileScreen() {
   const { profileAvailable, profile, profileError, language, setLanguage } = useApp();
   const [message, setMessage] = useState('');
-  return <Page title="My profile" note={profileAvailable ? 'Stored only on this computer' : undefined}>
+  return <Page title={ui("My profile")} note={profileAvailable ? ui("Stored only on this computer") : undefined}>
     {profileAvailable ? <>
       <ErrorNote error={profileError} />
       {profile !== undefined
         ? <ProfileForm key={JSON.stringify(profile)} initial={profile} onMessage={setMessage} />
-        : !profileError && <p role="status">Loading profile…</p>}
+        : !profileError && <p role="status">{ui("Loading profile…")}</p>}
     </> : <div className="panel profile-panel">
-      <p className="mb-4">Personal profiles are available in the desktop app.</p>
-      <label>Language
-        <select className="field-control" value={language} onChange={event => setLanguage(event.target.value)}>
+      <p className="mb-4">{ui("Personal profiles are available in the desktop app.")}</p>
+      <label>{ui("Language")}<select className="field-control" value={language} onChange={event => setLanguage(event.target.value)}>
           <LanguageOptions />
         </select>
       </label>
@@ -29,7 +29,7 @@ export function ProfileScreen() {
 }
 
 function LanguageOptions() {
-  return RIGHTS_CARD_LANGS.map(([code, name]) => <option key={code} value={code}>{name}</option>);
+  return UI_LANGUAGES.map(([code, name]) => <option key={code} value={code} lang={code}>{name}</option>);
 }
 
 function ProfileForm({ initial, onMessage }: { initial: ProfileDetails | null; onMessage: (message: string) => void }) {
@@ -52,7 +52,7 @@ function ProfileForm({ initial, onMessage }: { initial: ProfileDetails | null; o
         language: value('language'), employeeId: value('employeeId') || undefined, email: value('email') || undefined,
       });
       setRoleOverride(undefined); // The saved role now decides the menu.
-      onMessage('Profile saved.');
+      onMessage(ui('Profile saved.'));
     } catch (e) { setError(errMsg(e)); }
     finally { setBusy(false); }
   }
@@ -64,7 +64,7 @@ function ProfileForm({ initial, onMessage }: { initial: ProfileDetails | null; o
     try {
       await clearProfile();
       setClearing(false);
-      onMessage('Profile cleared.');
+      onMessage(ui('Profile cleared.'));
     } catch (e) { setError(errMsg(e)); }
     finally { setBusy(false); }
   }
@@ -72,28 +72,28 @@ function ProfileForm({ initial, onMessage }: { initial: ProfileDetails | null; o
   return <form className="panel profile-panel" onSubmit={event => void update(event)}>
     <ErrorNote error={error} />
     <fieldset disabled={busy} className="profile-fields">
-      <label>Full name<input className="field-control" name="fullName" autoComplete="name" required maxLength={160} defaultValue={initial?.fullName} /></label>
-      <label>Role<select className="field-control" name="role" required defaultValue={initial?.role ?? ''}>
-        <option value="" disabled>Choose a role</option>
-        {PROFILE_ROLES.map(({ group, roles }) => <optgroup key={group} label={group}>
-          {roles.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+      <label>{ui("Full name")}<input className="field-control" name="fullName" autoComplete="name" required maxLength={160} defaultValue={initial?.fullName} /></label>
+      <label>{ui("Role")}<select className="field-control" name="role" required defaultValue={initial?.role ?? ''}>
+        <option value="" disabled>{ui("Choose a role")}</option>
+        {PROFILE_ROLES.map(({ group, roles }) => <optgroup key={group} label={ui(group)}>
+          {roles.map(([value, label]) => <option key={value} value={value}>{ui(label)}</option>)}
         </optgroup>)}
       </select></label>
-      <label>Court or office<input className="field-control" name="office" autoComplete="organization" required maxLength={160} defaultValue={initial?.office} /></label>
-      <label>District<input className="field-control" name="district" required maxLength={160} defaultValue={initial?.district ?? 'Raipur'} /></label>
-      <label>Designation<input className="field-control" name="designation" autoComplete="organization-title" required maxLength={160} defaultValue={initial?.designation} /></label>
-      <label>Preferred language<select className="field-control" name="language" defaultValue={initial?.language ?? 'en'}><LanguageOptions /></select></label>
-      <label>Bar enrolment or employee ID <small>Optional</small><input className="field-control" name="employeeId" maxLength={160} defaultValue={initial?.employeeId} /></label>
-      <label>Email <small>Optional</small><input className="field-control" name="email" type="email" autoComplete="email" maxLength={254} defaultValue={initial?.email} /></label>
+      <label>{ui("Court or office")}<input className="field-control" name="office" autoComplete="organization" required maxLength={160} defaultValue={initial?.office} /></label>
+      <label>{ui("District")}<input className="field-control" name="district" required maxLength={160} defaultValue={initial?.district ?? 'Raipur'} /></label>
+      <label>{ui("Designation")}<input className="field-control" name="designation" autoComplete="organization-title" required maxLength={160} defaultValue={initial?.designation} /></label>
+      <label>{ui("Preferred language")}<select className="field-control" name="language" defaultValue={initial?.language === 'hi' ? 'hi' : 'en'}><LanguageOptions /></select></label>
+      <label>{ui("Bar enrolment or employee ID") + " "}<small>{ui("Optional")}</small><input className="field-control" name="employeeId" maxLength={160} defaultValue={initial?.employeeId} /></label>
+      <label>{ui("Email") + " "}<small>{ui("Optional")}</small><input className="field-control" name="email" type="email" autoComplete="email" maxLength={254} defaultValue={initial?.email} /></label>
     </fieldset>
     <div className="profile-actions">
-      <button className={btnPrimary} disabled={busy}>Save profile</button>
-      {initial && !clearing && <button className={btn} type="button" disabled={busy} onClick={() => setClearing(true)}>Clear my details</button>}
+      <button className={btnPrimary} disabled={busy}>{ui("Save profile")}</button>
+      {initial && !clearing && <button className={btn} type="button" disabled={busy} onClick={() => setClearing(true)}>{ui("Clear my details")}</button>}
     </div>
-    {clearing && <div className="clear-profile" aria-label="Confirm clearing profile">
-      <p>Clear your saved profile from this computer?</p>
-      <button className={btn} type="button" disabled={busy} onClick={() => void clear()}>Clear profile</button>
-      <button className={btn} type="button" disabled={busy} onClick={() => setClearing(false)}>Cancel</button>
+    {clearing && <div className="clear-profile" aria-label={ui("Confirm clearing profile")}>
+      <p>{ui("Clear your saved profile from this computer?")}</p>
+      <button className={btn} type="button" disabled={busy} onClick={() => void clear()}>{ui("Clear profile")}</button>
+      <button className={btn} type="button" disabled={busy} onClick={() => setClearing(false)}>{ui("Cancel")}</button>
     </div>}
   </form>;
 }

@@ -3,7 +3,7 @@ import type { SectionSuggestion } from '@courtplus/contracts';
 import { HINT_LABEL } from '@courtplus/contracts';
 import { btn, btnPrimary, Page } from '../components/ui';
 import { useApp } from '../lib/context';
-import { t } from '../lib/i18n';
+import { t, ui } from '../lib/i18n';
 import { researchApi } from '../lib/research';
 // The guides package is pure TypeScript with no I/O; the renderer matches locally.
 import { BUILTIN_GUIDES, getGuideById, matchGuides, type Guide, type MatchResult } from '../../../../packages/guides/src/index';
@@ -19,7 +19,8 @@ export function adviseFor(description: string): MatchResult[] {
 
 export function RightsAdvisor({ title = 'Rights advisor' }: { title?: string }) {
   const { language } = useApp();
-  const [lang, setLang] = useState<Lang>(language === 'hi' ? 'hi' : 'en');
+  const [guideLanguage, setGuideLanguage] = useState<Lang>();
+  const lang = guideLanguage ?? (language === 'hi' ? 'hi' : 'en');
   const [matches, setMatches] = useState<MatchResult[] | null>(null);
   const [chosen, setChosen] = useState<Guide | null>(null);
   const [sections, setSections] = useState<SectionSuggestion[]>([]);
@@ -40,7 +41,7 @@ export function RightsAdvisor({ title = 'Rights advisor' }: { title?: string }) 
   const others = matches?.filter(match => match.guide.id !== chosen?.id) ?? [];
   const fallback = getGuideById('free-legal-aid');
 
-  return <Page title={title} note={t('rights.note', 'Find your rights and the next steps. Not legal advice; free legal aid can help you.')}>
+  return <Page title={ui(title)} note={t('rights.note', 'Find your rights and the next steps. Not legal advice; free legal aid can help you.')}>
     <form className="panel rights-form" onSubmit={submit}>
       <label htmlFor="rights-description" className="font-medium">{t('rights.describe', 'Describe your problem in your own words')}</label>
       <textarea id="rights-description" name="description" className="field-control" rows={4} maxLength={4000} required
@@ -49,8 +50,8 @@ export function RightsAdvisor({ title = 'Rights advisor' }: { title?: string }) 
         <button className={btnPrimary}>{t('rights.find', 'Find my rights and next steps')}</button>
         <LegalAidButton />
         <label className="ml-auto text-sm">{t('rights.showIn', 'Show guide in')}{' '}
-          <select className="field-control inline-block w-auto" value={lang} onChange={event => setLang(event.target.value as Lang)}>
-            <option value="en">English</option><option value="hi">हिन्दी</option>
+          <select className="field-control inline-block w-auto" value={lang} onChange={event => setGuideLanguage(event.target.value as Lang)}>
+            <option value="en">{ui("English")}</option><option value="hi">हिन्दी</option>
           </select>
         </label>
       </div>
@@ -64,11 +65,11 @@ export function RightsAdvisor({ title = 'Rights advisor' }: { title?: string }) 
 
     {chosen && <GuideCard guide={chosen} lang={lang} />}
 
-    {others.length > 0 && <section className="mt-4" aria-label="Other matches">
+    {others.length > 0 && <section className="mt-4" aria-label={ui("Other matches")}>
       <TopicChips guides={others.map(match => match.guide)} lang={lang} onPick={setChosen} label={t('rights.oneOfThese', 'Is it one of these?')} />
     </section>}
 
-    {chosen && sections.length > 0 && <section className="panel mt-4" aria-label="Possible sections">
+    {chosen && sections.length > 0 && <section className="panel mt-4" aria-label={ui("Possible sections")}>
       <h2 className="font-semibold">{t('rights.sections', 'Sections that may apply')}</h2>
       <ul className="text-sm">{sections.map(hint => <li key={hint.act + hint.section}>
         {hint.act} {hint.section}{hint.bnsEquivalent ? ` (BNS ${hint.bnsEquivalent})` : ''} · {hint.source}
@@ -98,7 +99,7 @@ export function shortTitle(title: string): string {
 
 function HindiNote({ guide, lang }: { guide: Guide; lang: Lang }) {
   return lang === 'hi' && !guide.hi_reviewed
-    ? <span className="hindi-unreviewed" title="Machine or draft Hindi; English is authoritative"> (Hindi not yet reviewed)</span> : null;
+    ? <span className="hindi-unreviewed" title={ui("Machine or draft Hindi; English is authoritative")}>{" " + ui("(Hindi not yet reviewed)")}</span> : null;
 }
 
 export function GuideCard({ guide, lang }: { guide: Guide; lang: Lang }) {

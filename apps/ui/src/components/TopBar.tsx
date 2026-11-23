@@ -3,6 +3,8 @@ import type { Person } from '@courtplus/contracts';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { addDays, todayIST, useApp, type View } from '../lib/context';
 import { useWorkData } from '../lib/deadlines';
+import { ui } from '../lib/i18n';
+import { DisplayControls } from './DisplayControls';
 import { Icon } from './icons';
 
 export function TopBar() {
@@ -21,26 +23,27 @@ export function TopBar() {
 
   return <header className="topbar">
     <div className="topbar-greeting">
-      <p>{names ? `Hi, ${names[0]}!` : 'Welcome'}</p>
+      <p>{names ? ui('Hi,') + ' ' + names[0] + '!' : ui('Welcome')}</p>
       {profile?.office && <span title={profile.office}>{profile.office}</span>}
     </div>
     <label className="view-control">
-      <span className="sr-only">Active view</span>
+      <span className="sr-only">{ui("Active view")}</span>
       <select value={view} onChange={event => setView(event.target.value as View)}>
-        <option value="legal_aid">Legal-aid view</option>
-        <option value="utrc">Review committee view</option>
+        <option value="legal_aid">{ui("Legal-aid view")}</option>
+        <option value="utrc">{ui("Review committee view")}</option>
       </select>
     </label>
     <div className="topbar-actions">
       <AliasSearch />
-      <Link className="button secondary quick-link" to="/board"><Icon name="board" size={16} /> Board</Link>
-      <Link className="button secondary quick-link" to="/calendar"><Icon name="calendar" size={16} /> Calendar</Link>
-      <Link className="button primary" to="/import"><Icon name="plus" size={18} /> Import order</Link>
+      <DisplayControls />
+      <Link className="button secondary quick-link" to="/board"><Icon name="board" size={16} />{" " + ui("Board")}</Link>
+      <Link className="button secondary quick-link" to="/calendar"><Icon name="calendar" size={16} />{" " + ui("Calendar")}</Link>
+      <Link className="button primary" to="/import"><Icon name="plus" size={18} />{" " + ui("Import order")}</Link>
       <Link to="/calendar" className="icon-button deadline-bell" aria-label={bellLabel} title={bellLabel}>
         <Icon name="bell" />
         {count !== undefined && <span className="bell-count" aria-hidden="true">{count}</span>}
       </Link>
-      <Link className="icon-button profile-avatar" to="/profile" aria-label="My profile" title="My profile">
+      <Link className="icon-button profile-avatar" to="/profile" aria-label={ui("My profile")} title={ui("My profile")}>
         {initials ?? <Icon name="person" />}
       </Link>
     </div>
@@ -82,15 +85,15 @@ function AliasSearch() {
     onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}
     onKeyDown={event => { if (event.key === 'Escape') setOpen(false); }}>
     <Icon name="search" size={17} />
-    <input aria-label="Search cases by alias" aria-controls={searching ? resultsId : undefined}
-      type="search" placeholder="Search by alias" value={query} onFocus={() => setOpen(true)}
+    <input aria-label={ui("Search cases by alias")} aria-controls={searching ? resultsId : undefined}
+      type="search" placeholder={ui("Search by alias")} value={query} onFocus={() => setOpen(true)}
       onChange={event => { setQuery(event.target.value); setOpen(true); }} />
     {searching && <div className="search-results" id={resultsId}>
       {failed || !people || !matches.length
-        ? <p role="status">{failed ? 'Search unavailable' : !people ? 'Searching…' : 'No matching aliases'}</p>
-        : <ul aria-label="Matching aliases">{matches.map(person => <li key={person.id}>
+        ? <p role="status">{failed ? ui("Search unavailable") : !people ? ui("Searching…") : ui("No matching aliases")}</p>
+        : <ul aria-label={ui("Matching aliases")}>{matches.map(person => <li key={person.id}>
           <Link to={destination(person)} onClick={() => setOpen(false)}>
-            <strong>{person.alias}</strong><span>{person.caseIds.length} {person.caseIds.length === 1 ? 'case' : 'cases'}</span>
+            <strong>{person.alias}</strong><span>{person.caseIds.length} {person.caseIds.length === 1 ? ui("case") : ui("cases")}</span>
           </Link>
         </li>)}</ul>}
     </div>}

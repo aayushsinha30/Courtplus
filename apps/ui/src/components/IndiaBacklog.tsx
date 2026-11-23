@@ -1,3 +1,4 @@
+import { ui } from '../lib/i18n';
 import india from '../../../../data/stats/india.json';
 
 // Official data.gov.in figures, shown exactly as published with their source and date.
@@ -20,7 +21,7 @@ export function IndiaBacklog() {
   const figures = backlogFigures();
   if (!figures.length) return null;
   return <section className="panel india-backlog" aria-labelledby="india-backlog-title">
-    <h2 id="india-backlog-title">India&apos;s backlog</h2>
+    <h2 id="india-backlog-title">{ui("India's backlog")}</h2>
     <ul className="overview-list">{figures.map(figure => <li key={figure.id} className="overview-row">
       <div className="overview-label"><span>{figure.short}</span><strong>{figure.value.toLocaleString('en-IN')}</strong></div>
       <p><a href={figure.url} target="_blank" rel="noreferrer">{figure.source}</a> · {figure.date}</p>

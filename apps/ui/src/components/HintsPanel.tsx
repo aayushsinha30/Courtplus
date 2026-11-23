@@ -1,3 +1,4 @@
+import { ui } from '../lib/i18n';
 import { useState, type ReactNode } from 'react';
 import {
   HINT_LABEL, type CaseRecord, type HintDecision, type HintKind, type HintResult, type PrecedentHit, type RoleHint, type SectionSuggestion,
@@ -56,27 +57,26 @@ export function HintsPanel({ record }: { record: CaseRecord }) {
   const item = (kind: HintKind, hintId: string, label: string, source: string, body: ReactNode) =>
     <li key={hintId} className="hint-item">
       <div>{body}</div>
-      <p className="text-xs muted">Source: {source} · <strong className="hint-label">{HINT_LABEL}</strong></p>
+      <p className="text-xs muted">{ui("Source:") + " "}{source} · <strong className="hint-label">{HINT_LABEL}</strong></p>
       {decisions[hintId]
-        ? <p className="text-sm" role="status">{decisions[hintId] === 'accepted' ? '✓ Accepted' : '✗ Dismissed'} (logged)</p>
+        ? <p className="text-sm" role="status">{decisions[hintId] === 'accepted' ? ui("✓ Accepted") : ui("✗ Dismissed")}{" " + ui("(logged)")}</p>
         : <div className="flex gap-2">
-          <button className={btn} type="button" onClick={() => void decide(kind, hintId, label, source, 'accepted')} aria-label={`Accept ${label}`}>Accept</button>
-          <button className={btn} type="button" onClick={() => void decide(kind, hintId, label, source, 'dismissed')} aria-label={`Dismiss ${label}`}>Dismiss</button>
+          <button className={btn} type="button" onClick={() => void decide(kind, hintId, label, source, 'accepted')} aria-label={`Accept ${label}`}>{ui("Accept")}</button>
+          <button className={btn} type="button" onClick={() => void decide(kind, hintId, label, source, 'dismissed')} aria-label={`Dismiss ${label}`}>{ui("Dismiss")}</button>
         </div>}
     </li>;
 
   return <section aria-labelledby="hints-title" className="order-3 rounded border bg-white p-3 hints-panel">
-    <h2 id="hints-title" className="text-lg font-semibold">Hints for this case</h2>
+    <h2 id="hints-title" className="text-lg font-semibold">{ui("Hints for this case")}</h2>
     <p className="text-sm text-slate-600">{HINT_LABEL}. Hints point to law and past judgments with their source; they never suggest a verdict or an outcome.</p>
-    <label className="mt-2 block text-sm font-medium">Case facts used for hints
-      <textarea className="field-control mt-1 w-full" rows={4} maxLength={100_000} value={text} onChange={event => setText(event.target.value)} />
+    <label className="mt-2 block text-sm font-medium">{ui("Case facts used for hints")}<textarea className="field-control mt-1 w-full" rows={4} maxLength={100_000} value={text} onChange={event => setText(event.target.value)} />
     </label>
     <button className={btnPrimary + ' mt-2'} type="button" disabled={busy || !text.trim()} onClick={() => void load()}>
-      {busy ? 'Finding hints…' : hints ? 'Refresh hints' : 'Show hints'}
+      {busy ? ui("Finding hints…") : hints ? 'Refresh hints' : 'Show hints'}
     </button>
     <ErrorNote error={error} />
     {hints && <div className="mt-3 grid gap-3">
-      <HintGroup title="Suggested sections" result={hints.sections} empty="No section hints for these facts.">
+      <HintGroup title={ui("Suggested sections")} result={hints.sections} empty="No section hints for these facts.">
         {items => items.map(hint => {
           const label = `${hint.act} ${hint.section}`;
           return item('section', `section:${label}`, label, hint.source, <>
@@ -85,13 +85,13 @@ export function HintsPanel({ record }: { record: CaseRecord }) {
           </>);
         })}
       </HintGroup>
-      <HintGroup title="Similar past cases" result={hints.precedents} empty="No similar judgments found.">
+      <HintGroup title={ui("Similar past cases")} result={hints.precedents} empty="No similar judgments found.">
         {items => items.map(hit => item('precedent', `precedent:${hit.id}`, hit.citation, hit.source, <>
           <strong>{hit.title}</strong> <span className="text-sm">{hit.citation}{hit.year ? ` · ${hit.year}` : ''} · {hit.court}</span>
-          {hit.url && <> · <a className="text-sm" href={hit.url} target="_blank" rel="noreferrer">official copy</a></>}
+          {hit.url && <> · <a className="text-sm" href={hit.url} target="_blank" rel="noreferrer">{ui("official copy")}</a></>}
         </>))}
       </HintGroup>
-      <HintGroup title="Case structure" result={hints.roles} empty="Add a few sentences of facts to see their structure.">
+      <HintGroup title={ui("Case structure")} result={hints.roles} empty="Add a few sentences of facts to see their structure.">
         {items => items.map((hint, index) => {
           const role = ROLE_NAMES[hint.role] ?? hint.role;
           return item('structure', `structure:${index}:${hint.role}`, `${role}: ${hint.sentence.slice(0, 80)}`, hint.source, <>

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import type { CaseRecord, CourtEvent } from '@courtplus/contracts';
 import { btnPrimary, ErrorNote, errMsg, Page } from '../components/ui';
 import { todayIST, useApp } from '../lib/context';
-import { t } from '../lib/i18n';
+import { t, ui } from '../lib/i18n';
 import { CitizenSettlementEstimator } from './CitizenSettlementEstimator';
 import { HearingBreakdowns, loadHearingBreakdowns, type HearingBreakdownResult } from './HearingBreakdowns';
 
@@ -66,7 +66,7 @@ function CaseHistory({ events }: { events: CourtEvent[] }) {
   return <ol className="space-y-2 text-sm">{Array.from(byDate, ([date, day]) => {
     const hasHearing = day.some(event => event.kind === 'hearing');
     const entries = day.map((event, index) => <li key={event.kind + '-' + index}>
-      {EVENT_WORDS[event.kind]}{event.note ? ' — ' + event.note : ''}
+      {ui(EVENT_WORDS[event.kind])}{event.note ? ' — ' + event.note : ''}
       {event.source?.page && <p>{t('track.hearing.orderPage', 'Source document page')} {event.source.page}</p>}
     </li>);
     if (hasHearing) return <li key={date}>
@@ -114,16 +114,16 @@ export function TrackCase() {
       <label>{t('track.reference', 'Case number or CNR')}
         <input className="field-control" name="reference" required maxLength={100} autoComplete="off" placeholder="e.g. CGRP010012342024" />
       </label>
-      <button className={btnPrimary + ' mt-2'} disabled={busy}>{busy ? 'Looking…' : t('track.find', 'Find my case')}</button>
+      <button className={btnPrimary + ' mt-2'} disabled={busy}>{busy ? ui("Looking…") : t('track.find', 'Find my case')}</button>
     </form>
     <ErrorNote error={error} />
     <p className="mt-3"><a href={ECOURTS_CASE_STATUS} target="_blank" rel="noreferrer">{t('track.ecourts', 'Official case status on eCourts services')}</a></p>
 
     {record === null && <p role="status" className="panel mt-3">{t('track.noUniqueMatch', 'This court office could not find a unique case with that number. Try the CNR or use the eCourts link above.')}</p>}
-    {record && dates && <section className="panel mt-3" aria-label="Case status">
+    {record && dates && <section className="panel mt-3" aria-label={ui("Case status")}>
       <h2 className="text-lg font-semibold">{record.caseNo ?? record.cnr ?? record.id}{record.court ? ` · ${record.court}` : ''}</h2>
-      <p><strong>{t('track.stage', 'Stage')}:</strong> {record.pendingStatus} — {STAGE_GLOSSARY[record.pendingStatus]}</p>
-      <p><strong>{t('track.next', 'Next date')}:</strong> {dates.next ? `${dates.next.on} (${EVENT_WORDS[dates.next.kind]})` : t('track.noNext', 'No next date recorded here yet')}</p>
+      <p><strong>{t('track.stage', 'Stage')}:</strong> {ui(record.pendingStatus)} — {ui(STAGE_GLOSSARY[record.pendingStatus])}</p>
+      <p><strong>{t('track.next', 'Next date')}:</strong> {dates.next ? `${dates.next.on} (${ui(EVENT_WORDS[dates.next.kind])})` : t('track.noNext', 'No next date recorded here yet')}</p>
       <h3 className="mt-3 font-semibold">{t('track.history', 'What has happened so far')}</h3>
       <CaseHistory events={dates.past} />
       <HearingBreakdowns result={summaries} />
@@ -134,7 +134,7 @@ export function TrackCase() {
     <details className="panel mt-4">
       <summary className="font-semibold">{t('track.glossary', 'What the stages mean')}</summary>
       <dl className="text-sm">{Object.entries(STAGE_GLOSSARY).map(([stage, meaning]) => <div key={stage} className="mt-1">
-        <dt className="font-medium capitalize">{stage}</dt><dd>{meaning}</dd>
+        <dt className="font-medium capitalize">{ui(stage)}</dt><dd>{ui(meaning)}</dd>
       </div>)}</dl>
     </details>
   </Page>;

@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import hindi from '../../../../data/ui/hi.json';
+import { languageKey, readPreference, writePreference, type UiLanguage } from './preferences';
 
 type Translation = Record<string, unknown> & { _meta?: { reviewed?: boolean } };
 
@@ -16,17 +18,23 @@ for (const [path, mod] of Object.entries(i18nModules)) {
   }
 }
 
-let strings: Translation = translations['en'] ?? {};
+const hindiInterface: Readonly<Record<string, string>> = hindi;
+let activeLanguage: UiLanguage = 'en';
+
+/** Localizes interface copy. Case data and quoted source text bypass this function. */
+export function ui(english: string): string {
+  return activeLanguage === 'hi' ? hindiInterface[english.trim()] ?? english : english;
+}
 
 /** Look up a UI string; falls back to the English default, then the key. */
 export function t(key: string, fallback?: string): string {
-  const value = strings[key];
-  return typeof value === 'string' ? value : fallback ?? key;
+  const value = translations[activeLanguage]?.[key] ?? translations.en?.[key];
+  return typeof value === 'string' ? value : fallback === undefined ? key : ui(fallback);
 }
 
 /** Loads data/i18n/<lang>.json if present. Missing file is fine. */
 export async function loadLang(lang: string): Promise<void> {
-  strings = translations[lang] ?? {};
+  activeLanguage = lang === 'hi' ? 'hi' : 'en';
 }
 
 /** Adds assets/fonts/fonts.css when it exists; ignored otherwise. */
@@ -39,12 +47,17 @@ export function loadFonts(): void {
 }
 
 export function useLang(): [string, (l: string) => void] {
-  const [lang, setLang] = useState('en');
-  const [, bump] = useState(0);
+  const [lang, setLang] = useState<UiLanguage>(() => readPreference(languageKey) === 'hi' ? 'hi' : 'en');
+  activeLanguage = lang;
   useEffect(() => {
-    void loadLang(lang).then(() => bump((n) => n + 1));
+    document.documentElement.lang = lang;
   }, [lang]);
-  return [lang, setLang];
+  const change = useCallback((value: string) => {
+    const next = value === 'hi' ? 'hi' : 'en';
+    writePreference(languageKey, next);
+    setLang(next);
+  }, []);
+  return [lang, change];
 }
 
 export function isReviewedLanguage(lang: string): boolean {

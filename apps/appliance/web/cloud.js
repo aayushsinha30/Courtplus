@@ -3,6 +3,84 @@
 (() => {
   const mode = document.currentScript.dataset.page;
   let session;
+  let hindi = {};
+  let catalog;
+  const root = document.documentElement;
+
+  function preference(key, value) {
+    try {
+      if (value === undefined) return localStorage.getItem(key);
+      localStorage.setItem(key, value);
+    } catch { /* Preferences still work until this window closes. */ }
+  }
+
+  const languageKey = 'courtplus.uiLanguage';
+  const themeKey = 'courtplus.theme';
+  function display(text) {
+    return root.lang === 'hi' && Object.hasOwn(hindi, text) ? hindi[text] : text;
+  }
+
+  function applyLanguage(language, render) {
+    const selected = language === 'hi' ? 'hi' : 'en';
+    if (root.lang !== selected) root.lang = selected;
+    if (root.lang === 'en') { render(); return; }
+    catalog ??= fetch('/cloud-hi.json').then(response => {
+      if (!response.ok) throw new Error('Hindi catalog unavailable');
+      return response.json();
+    }).then(value => { hindi = value; }).catch(() => { catalog = undefined; });
+    void catalog.then(render);
+  }
+
+  function standalonePreferences() {
+    const main = document.querySelector('main');
+    if (!main) return;
+    // These nodes come from the signed-out and handoff page templates at startup.
+    // Preserve the original text for switching back and leave input values and case data alone.
+    const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
+    const strings = [];
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.textContent.trim()) strings.push([node, node.textContent]);
+    }
+    const controls = document.createElement('div');
+    controls.className = 'cloud-preferences';
+    const label = document.createElement('label');
+    const labelText = document.createElement('span');
+    const languages = document.createElement('select');
+    languages.add(new Option('English', 'en'));
+    languages.add(new Option('हिन्दी', 'hi'));
+    label.append(labelText, languages);
+    const theme = document.createElement('button');
+    theme.type = 'button';
+    controls.append(label, theme);
+    main.prepend(controls);
+
+    function render() {
+      for (const [node, original] of strings) {
+        const trimmed = original.trim();
+        node.textContent = original.replace(trimmed, () => display(trimmed));
+      }
+      labelText.textContent = display('App language');
+      languages.value = root.lang;
+      const night = root.dataset.theme === 'night';
+      theme.textContent = display(night ? 'Switch to day mode' : 'Switch to night mode');
+      theme.setAttribute('aria-pressed', String(night));
+      document.dispatchEvent(new Event('courtplus:language'));
+    }
+    languages.addEventListener('change', () => {
+      preference(languageKey, languages.value);
+      applyLanguage(languages.value, render);
+    });
+    theme.addEventListener('click', () => {
+      root.dataset.theme = root.dataset.theme === 'night' ? 'day' : 'night';
+      preference(themeKey, root.dataset.theme);
+      render();
+    });
+    render();
+    applyLanguage(preference(languageKey), render);
+  }
+
+  root.dataset.theme = preference(themeKey) === 'night' ? 'night' : 'day';
+  if (mode === 'login' || mode === 'home' || mode === 'handoffs') standalonePreferences();
   const methods = [
     'listPersons', 'listCases', 'importOrder', 'saveCase', 'screen', 'board', 'updateCard',
     'exportDraft', 'exportScReturn', 'verify', 'stats', 'role',
@@ -87,6 +165,12 @@
       bar.innerHTML = '<a href="/handoffs">Live jail and DLSA handoffs</a> ' +
         '<button type="button" id="sign-out">Sign out</button> <span id="cloud-downloads" aria-live="polite"></span>';
       document.body.prepend(bar);
+      const render = () => {
+        bar.querySelector('a').textContent = display('Live jail and DLSA handoffs');
+        bar.querySelector('button').textContent = display('Sign out');
+      };
+      new MutationObserver(() => applyLanguage(root.lang, render)).observe(root, { attributes: true, attributeFilter: ['lang'] });
+      applyLanguage(preference(languageKey), render);
       signOut();
     });
   }
@@ -112,7 +196,7 @@
         await post('/api/auth/login', Object.fromEntries(new FormData(form)), false);
         location.replace('/');
       } catch (error) {
-        message.textContent = error.message;
+        message.textContent = display(error.message);
       }
     });
   }
@@ -135,14 +219,14 @@
         for (const order of orders) {
           const row = document.createElement('li');
           const state = order.acknowledgedAt !== null
-            ? 'Acknowledged ' + timestamp.format(order.acknowledgedAt)
-            : order.escalatedAt !== null ? 'Overdue · escalated' : 'Awaiting acknowledgement';
+            ? display('Acknowledged') + ' ' + timestamp.format(order.acknowledgedAt)
+            : order.escalatedAt !== null ? display('Overdue · escalated') : display('Awaiting acknowledgement');
           const text = document.createElement('p');
-          text.textContent = labels[order.kind] + ' · ' + order.caseId + ' · ' + order.orderOn + ' · ' + state;
+          text.textContent = display(labels[order.kind]) + ' · ' + order.caseId + ' · ' + order.orderOn + ' · ' + state;
           row.append(text);
           if (role === 'superintendent' && order.acknowledgedAt === null) {
             const ack = document.createElement('button');
-            ack.textContent = 'Acknowledge receipt';
+            ack.textContent = display('Acknowledge receipt');
             ack.addEventListener('click', async () => {
               ack.disabled = true;
               try {
@@ -158,10 +242,11 @@
         }
       }
 
+      document.addEventListener('courtplus:language', render);
       const live = new EventSource('/api/handoff/stream');
-      live.onopen = () => { status.textContent = 'Connected'; };
+      live.onopen = () => { status.textContent = display('Connected'); };
       live.onerror = () => {
-        status.textContent = 'Connection lost. Reconnecting…';
+        status.textContent = display('Connection lost. Reconnecting…');
         session = undefined;
         void currentSession().catch(() => {});
       };
@@ -189,10 +274,10 @@
           try {
             if (role === 'dlsa') {
               await post('/api/handoff', fields);
-              status.textContent = 'Handoff sent.';
+              status.textContent = display('Handoff sent.');
             } else {
               await post('/api/cases/' + encodeURIComponent(fields.caseId) + '/application-filed', { filedOn: fields.filedOn });
-              status.textContent = 'Application filing recorded.';
+              status.textContent = display('Application filing recorded.');
             }
           } catch (error) {
             status.textContent = error.message;

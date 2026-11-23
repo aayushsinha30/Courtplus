@@ -1,3 +1,4 @@
+import { ui } from '../lib/i18n';
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useApp } from '../lib/context';
@@ -20,12 +21,12 @@ export function Stats() {
   useEffect(() => { api.stats().then((r) => setFigs(parseFigures(r)), (e) => setError(errMsg(e))); }, [api]);
 
   return (
-    <Page title="Statistics">
+    <Page title={ui("Statistics")}>
       <ErrorNote error={error} />
-      {figs && figs.length === 0 && <Empty title="No statistics yet" hint="Figures appear once cases are imported and official sources are loaded." />}
+      {figs && figs.length === 0 && <Empty title={ui("No statistics yet")} hint={ui("Figures appear once cases are imported and official sources are loaded.")} />}
       {figs && figs.length > 0 && (
         <>
-          <div className="panel h-72" role="img" aria-label="Bar chart of figures; the table below has the same numbers">
+          <div className="panel h-72" role="img" aria-label={ui("Bar chart of figures; the table below has the same numbers")}>
             <ResponsiveContainer>
               <BarChart data={figs}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
@@ -35,7 +36,7 @@ export function Stats() {
             </ResponsiveContainer>
           </div>
           <table className="mt-4 w-full text-sm">
-            <thead><tr className="text-left"><th>Figure</th><th>Value</th><th>Source</th><th>As of</th></tr></thead>
+            <thead><tr className="text-left"><th>{ui("Figure")}</th><th>{ui("Value")}</th><th>{ui("Source")}</th><th>{ui("As of")}</th></tr></thead>
             <tbody>
               {figs.map((f) => <tr key={f.label} className="border-t"><td>{f.label}</td><td>{f.value}</td><td>{f.source}</td><td>{f.date}</td></tr>)}
             </tbody>

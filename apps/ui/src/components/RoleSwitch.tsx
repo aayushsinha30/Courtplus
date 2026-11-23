@@ -1,3 +1,4 @@
+import { ui } from '../lib/i18n';
 import { useApp } from '../lib/context';
 import { ROLE_GROUPS, roleGroup, setRoleOverride, useRoleOverride, useRole, type RoleGroup } from '../lib/roles';
 
@@ -8,7 +9,7 @@ export function RoleSwitch() {
   const override = useRoleOverride();
   const fromProfile = roleGroup(profile?.role ?? undefined);
   return <section className="grid gap-2 rounded border bg-white p-4" aria-labelledby="role-switch-title">
-    <h2 id="role-switch-title" className="font-semibold">View Court+ as</h2>
+    <h2 id="role-switch-title" className="font-semibold">{ui("View Court+ as")}</h2>
     <div role="radiogroup" aria-labelledby="role-switch-title" className="flex flex-wrap gap-3">
       {ROLE_GROUPS.map(({ value, label }) => <label key={value} className="flex items-center gap-1">
         <input type="radio" name="court-role" value={value} checked={role === value}
@@ -16,8 +17,8 @@ export function RoleSwitch() {
       </label>)}
     </div>
     <p className="text-sm text-slate-700">
-      {override ? 'Demo view. ' : ''}Your saved profile role is {fromProfile ? ROLE_GROUPS.find(item => item.value === fromProfile)!.label : 'not set (Judge view)'}.
-      {override && <> <button type="button" className="text-button" onClick={() => setRoleOverride(undefined)}>Use my profile role</button></>}
+      {override ? ui("Demo view. ") : ''}{ui("Your saved profile role is") + " "}{fromProfile ? ROLE_GROUPS.find(item => item.value === fromProfile)!.label : ui("not set (Judge view)")}.
+      {override && <> <button type="button" className="text-button" onClick={() => setRoleOverride(undefined)}>{ui("Use my profile role")}</button></>}
     </p>
   </section>;
 }

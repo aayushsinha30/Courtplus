@@ -4,7 +4,7 @@ import { Icon, type IconName } from './components/icons';
 import { TopBar } from './components/TopBar';
 import { useApp } from './lib/context';
 import { WorkDataProvider } from './lib/deadlines';
-import { t } from './lib/i18n';
+import { t, ui } from './lib/i18n';
 import { ImportOrder } from './screens/ImportOrder';
 import { Board } from './screens/Board';
 import { CaseList, CaseView } from './screens/CaseView';
@@ -90,36 +90,36 @@ export function App({ importScreen, settingsScreen }: { importScreen?: ReactNode
     <a href="#main" className="skip-link" onClick={event => {
       event.preventDefault();
       document.getElementById('main')?.focus();
-    }}>Skip to content</a>
+    }}>{ui("Skip to content")}</a>
     <div className={'app-shell' + (collapsed ? ' sidebar-collapsed' : '')}>
-      <aside className="app-sidebar" aria-label="Primary navigation">
+      <aside className="app-sidebar" aria-label={ui("Primary navigation")}>
         <div className="brand">
           <span className="brand-mark"><Icon name="brand" size={20} /></span>
           <strong className="sidebar-label">Court+</strong>
         </div>
-        <p className="nav-heading sidebar-label">Workspace</p>
-        <nav aria-label="Main"><ul className="nav-list">{primary.map(navLink)}</ul>
+        <p className="nav-heading sidebar-label">{ui("Workspace")}</p>
+        <nav aria-label={ui("Main")}><ul className="nav-list">{primary.map(navLink)}</ul>
           {more.length > 0 && <details className="nav-more">
-            <summary className="nav-item" title="More tools"><Icon name="board" /><span className="sidebar-label">More tools</span></summary>
+            <summary className="nav-item" title={ui("More tools")}><Icon name="board" /><span className="sidebar-label">{ui("More tools")}</span></summary>
             <ul className="nav-list">{more.map(navLink)}</ul>
           </details>}
         </nav>
         <div className="sidebar-bottom">
-          {settingsScreen && <NavLink to="/settings" title="Settings" aria-label="Settings" className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}>
-            <Icon name="settings" /><span className="sidebar-label">Settings</span>
+          {settingsScreen && <NavLink to="/settings" title={ui("Settings")} aria-label={ui("Settings")} className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}>
+            <Icon name="settings" /><span className="sidebar-label">{ui("Settings")}</span>
           </NavLink>}
-          <button className="nav-item collapse-button" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!collapsed}>
-            <Icon name={collapsed ? 'expand' : 'collapse'} /><span className="sidebar-label">Collapse</span>
+          <button className="nav-item collapse-button" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? ui("Expand sidebar") : ui("Collapse sidebar")} aria-expanded={!collapsed}>
+            <Icon name={collapsed ? 'expand' : 'collapse'} /><span className="sidebar-label">{ui("Collapse")}</span>
           </button>
         </div>
       </aside>
       <div className="app-content">
         <TopBar />
         <main id="main" tabIndex={-1} className="main-content">
-          {profile === null && !dismissed && pathname === '/' && <aside className="profile-prompt" aria-label="Set up your profile">
-            <Icon name="person" /><p><strong>Personalise Court+</strong><span>Set your role and preferred language.</span></p>
-            <Link to="/profile" className="button secondary" onClick={dismissPrompt}>Set up profile</Link>
-            <button className="text-button" onClick={dismissPrompt}>Skip for now</button>
+          {profile === null && !dismissed && pathname === '/' && <aside className="profile-prompt" aria-label={ui("Set up your profile")}>
+            <Icon name="person" /><p><strong>{ui("Personalise Court+")}</strong><span>{ui("Set your role and preferred language.")}</span></p>
+            <Link to="/profile" className="button secondary" onClick={dismissPrompt}>{ui("Set up profile")}</Link>
+            <button className="text-button" onClick={dismissPrompt}>{ui("Skip for now")}</button>
           </aside>}
           <Routes>
             <Route path="/" element={<Dashboard />} />

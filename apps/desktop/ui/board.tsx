@@ -1,3 +1,4 @@
+import { ui } from '../../ui/src/lib/i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Card, Lane } from '@courtplus/contracts';
@@ -24,7 +25,7 @@ const STEP_LABEL: Record<Card['state'], string> = {
 function Stepper({ state }: { state: Card['state'] }) {
   const at = STEPS.indexOf(state);
   return (
-    <ol aria-label="Progress" className="mt-2 flex flex-wrap gap-1 text-xs">
+    <ol aria-label={ui("Progress")} className="mt-2 flex flex-wrap gap-1 text-xs">
       {STEPS.map((s, i) => (
         <li
           key={s}
@@ -65,16 +66,16 @@ export function Board() {
 
   if (cards && cards.length === 0) {
     return (
-      <Page title="Action board">
-        <Empty title="Nothing to act on yet" hint="Import a court order to begin." to="/import" cta="Import order" />
+      <Page title={ui("Action board")}>
+        <Empty title={ui("Nothing to act on yet")} hint={ui("Import a court order to begin.")} to="/import" cta={ui("Import order")} />
       </Page>
     );
   }
 
   return (
-    <Page title="Action board" note="Each card is a suggestion for a person to check. Nothing here is a decision.">
+    <Page title={ui("Action board")} note={ui("Each card is a suggestion for a person to check. Nothing here is a decision.")}>
       <ErrorNote error={error} />
-      {!cards && !error && <p>Loading…</p>}
+      {!cards && !error && <p>{ui("Loading…")}</p>}
       {cards && (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {LANES.map(({ lane, title, hint }) => {
@@ -85,19 +86,17 @@ export function Board() {
                 <p className="text-xs text-slate-600">{hint}</p>
                 {lane === 'NO_UPDATE_180' && queue && (
                   <div className="my-2 rounded bg-amber-50 p-2 text-sm">
-                    <Link to="/settings" className="underline">Daily cap: {queue.dailyCap}</Link>
-                    <p data-testid="days-to-clear" className="mt-1 font-medium">
-                      Days to clear: {queue.daysToClear} ({queue.remaining} remaining)
+                    <Link to="/settings" className="underline">{ui("Daily cap:") + " "}{queue.dailyCap}</Link>
+                    <p data-testid="days-to-clear" className="mt-1 font-medium">{ui("Days to clear:") + " "}{queue.daysToClear} ({queue.remaining} remaining)
                     </p>
                   </div>
                 )}
-                {inLane.length === 0 && <p className="mt-2 text-sm text-slate-600">None.</p>}
+                {inLane.length === 0 && <p className="mt-2 text-sm text-slate-600">{ui("None.")}</p>}
                 <ul className="mt-2 space-y-2">
                   {inLane.map((c) => (
                     <li key={c.id} className="rounded border p-2 text-sm">
                       <Link to={`/case/${c.caseId}`} className="font-medium text-blue-800 underline">{c.title}</Link>
-                      <p className="text-slate-700">
-                        Owner: {c.owner ?? 'unassigned'}{c.dueOn ? ` · Due ${c.dueOn}` : ''}
+                      <p className="text-slate-700">{ui("Owner:") + " "}{c.owner ?? 'unassigned'}{c.dueOn ? ` · Due ${c.dueOn}` : ''}
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {c.tags.filter(tag => !tag.endsWith(' days to clear')).map((tag) => (
@@ -109,8 +108,7 @@ export function Board() {
                         <button
                           onClick={() => void advance(c)}
                           className="mt-2 rounded border border-slate-400 px-2 py-1 text-xs hover:bg-slate-100"
-                        >
-                          Mark next step: {STEP_LABEL[STEPS[STEPS.indexOf(c.state) + 1]]}
+                        >{ui("Mark next step:") + " "}{STEP_LABEL[STEPS[STEPS.indexOf(c.state) + 1]]}
                         </button>
                       )}
                     </li>
